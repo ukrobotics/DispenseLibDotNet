@@ -38,7 +38,7 @@ jobs:
         run: nuget restore code\Components\DispenseLib\DispenseLib.sln
 
       - name: Build the .Net Solution
-        run: msbuild code\Components\DispenseLib\.sln
+        run: msbuild code\Components\DispenseLib\DispenseLib.sln
 
 #       # Runs a single command using the runners shell
 #       - name: Run a one-line script
