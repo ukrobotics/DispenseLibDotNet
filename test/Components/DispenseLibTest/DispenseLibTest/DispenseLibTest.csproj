@@ -8,8 +8,8 @@
     <ProjectGuid>{DD192CA6-9E1F-4F15-BB1A-EBCE9DFE28FC}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>UKRobotics.Public.D2.DispenseLibTest</RootNamespace>
-    <AssemblyName>UKRobotics.Public.D2.DispenseLibTest</AssemblyName>
+    <RootNamespace>UKRobotics.D2.DispenseLibTest</RootNamespace>
+    <AssemblyName>UKRobotics.D2.DispenseLibTest</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
