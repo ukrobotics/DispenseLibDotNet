@@ -7,8 +7,8 @@
     <ProjectGuid>{0744C899-1DD5-4316-8325-4CD40377C1F9}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>UKRobotics.Public.D2.DispenseLib</RootNamespace>
-    <AssemblyName>UKRobotics.Public.D2.DispenseLib</AssemblyName>
+    <RootNamespace>UKRobotics.D2.DispenseLib</RootNamespace>
+    <AssemblyName>UKRobotics.D2.DispenseLib</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>

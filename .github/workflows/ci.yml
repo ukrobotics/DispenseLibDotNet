@@ -1,5 +1,6 @@
-# This is a basic workflow to help you get started with Actions
-
+#####
+##
+#####
 name: CI
 
 # Controls when the workflow will run
@@ -23,6 +24,8 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+    
+      ################################################################
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       
@@ -30,22 +33,23 @@ jobs:
         uses: microsoft/setup-msbuild@v1.1
 
       - name: Setup NuGet.exe for use with actions
-        # You may pin to the exact commit or the version.
-        # uses: NuGet/setup-nuget@04b0c2b8d1b97922f67eca497d7cf0bf17b8ffe1
         uses: NuGet/setup-nuget@v1.0.5
 
       - name: Restore NuGet Packages
         run: nuget restore code\Components\DispenseLib\DispenseLib.sln
 
-      - name: Build the .Net Solution
-        run: msbuild code\Components\DispenseLib\DispenseLib.sln
+      - name: Restore NuGet Packages
+        run: nuget restore test\Components\DispenseLibTest\DispenseLibTest.sln
 
-#       # Runs a single command using the runners shell
-#       - name: Run a one-line script
-#         run: echo Hello, world!
-  
-#       # Runs a set of commands using the runners shell
-#       - name: Run a multi-line script
-#         run: |
-#           echo Add other actions to build,
-#           echo test, and deploy your project.
+      - name: Build the .Net Solution
+        run: msbuild code\Components\DispenseLib\DispenseLib.sln /p:Configuration=Release
+
+      - name: Build the TEST .Net Solution
+        run: msbuild test\Components\DispenseLibTest\DispenseLibTest.sln /p:Configuration=Release
+        
+      - name: Install NUnit.ConsoleRunner
+        run: nuget install NUnit.ConsoleRunner -Version 3.13.2 -DirectDownload -OutputDirectory .
+        
+      - name: Run UnitTests
+        run: ./NUnit.ConsoleRunner.3.13.2/tools/nunit3-console.exe  test\Components\DispenseLibTest\DispenseLibTest\bin\Release\UKRobotics.D2.DispenseLibTest.dll
+      ################################################################

@@ -1,10 +1,15 @@
 ﻿using NUnit.Framework;
 
-namespace UKRobotics.Public.D2.DispenseLibTest
+namespace UKRobotics.D2.DispenseLibTest
 {
     [TestFixture]
     public class TempTest
     {
-        
+
+        [Explicit]
+        public void Test1()
+        {
+
+        }
     }
 }
