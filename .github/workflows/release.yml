@@ -1,0 +1,91 @@
+#####
+##
+#####
+name: Release
+
+# Controls when the workflow will run
+on:
+  push:
+    tags:
+      - '*'
+
+#env:
+#  MY_VAR: 6
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    # I tried windows-latest which resolves to windows-2022 but this does not have the .net framework on it??? windows-2019 seems to work fine as of this time.
+    runs-on: windows-2019
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+
+      ################################################################
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      - name: version
+        run: echo ::set-output name=version::${GITHUB_REF#refs/*/}
+        id: version
+      
+      - name: setup-msbuild
+        uses: microsoft/setup-msbuild@v1.1
+
+      - name: Setup NuGet.exe for use with actions
+        uses: NuGet/setup-nuget@v1.0.5
+
+      - name: Restore NuGet Packages
+        run: nuget restore code\Components\DispenseLib\DispenseLib.sln
+
+      - name: Restore NuGet Packages
+        run: nuget restore test\Components\DispenseLibTest\DispenseLibTest.sln
+
+
+
+      - name: Build the .Net Solution
+        run: |
+          utils\UKRobotics.BuildUtils\UKRobotics.DotNetBuildUtils.exe set-assembly-attributes code\Components\DispenseLib\DispenseLib\DispenseLib.csproj  AssemblyCompany "$env:AssemblyCompany" AssemblyFileVersion $env:AssemblyFileVersion AssemblyVersion $env:AssemblyVersion 
+          type code\Components\DispenseLib\DispenseLib\Properties\AssemblyInfo.cs
+          msbuild code\Components\DispenseLib\DispenseLib.sln /p:Configuration=Release
+        env:
+            AssemblyVersion: ${{ github.ref }}
+            AssemblyFileVersion: ${{ github.ref }}
+            AssemblyCompany: UK ROBOTICS
+
+      - name: Build the TEST .Net Solution
+        run: msbuild test\Components\DispenseLibTest\DispenseLibTest.sln /p:Configuration=Release
+        
+      - name: Install NUnit.ConsoleRunner
+        run: nuget install NUnit.ConsoleRunner -Version 3.13.2 -DirectDownload -OutputDirectory .
+        
+      - name: Run UnitTests
+        run: ./NUnit.ConsoleRunner.3.13.2/tools/nunit3-console.exe  test\Components\DispenseLibTest\DispenseLibTest\bin\Release\UKRobotics.D2.DispenseLibTest.dll
+      ################################################################
+
+        
+      - name: release
+        uses: actions/create-release@v1
+        id: create_release
+        with:
+          draft: false
+          prerelease: false
+          release_name: ${{ steps.version.outputs.version }}
+          tag_name: ${{ github.ref }}
+          body_path: CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+
+      - name: upload artifacts
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: code\Components\DispenseLib\DispenseLib\bin\Release\UKRobotics.D2.DispenseLib.dll
+          asset_name: UKRobotics.D2.DispenseLib.dll
+          asset_content_type: application/octet-stream
+
