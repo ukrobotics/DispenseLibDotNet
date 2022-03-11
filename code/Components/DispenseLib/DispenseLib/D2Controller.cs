@@ -68,16 +68,14 @@ namespace UKRobotics.D2.DispenseLib
         public IAxis Arm2 { get; set; }
 
 
-        public void OpenComms(string comPort, int baud)
+        public void OpenComms(string comPort, int baud=115200)
         {
-
             ControlConnection = new ControlConnection(comPort, baud);
             ControllerArms = new Controller(ControlConnection, ControllerNumberArms, 2);
             ControllerZ = new Controller(ControlConnection, ControllerNumberZAxis, 2);
             ZAxis = ControllerZ.GetAxis(AxisNumberZAxis);
             Arm1 = ControllerArms.GetAxis(1);
             Arm2 = ControllerArms.GetAxis(2);
-
         }
 
         public void Dispose()
@@ -237,16 +235,14 @@ namespace UKRobotics.D2.DispenseLib
         {
             if (wellCount > 384)
             {
-                return 250;// ideally 200.. or less... but i was missing at 200...  we can prob reduce this - see https://github.com/ukrobotics/DispenserWebApp/issues/74
+                return 250;
             }
 
             return 750;
         }
 
         /// <summary>
-        /// COPY FROM JAVASCRIPT!!
-        /// COPY FROM JAVASCRIPT!!
-        /// COPY FROM JAVASCRIPT!!
+        /// NOTE THIS IS BASED/COPIED FROM THE WEB APP FROM THE JAVASCRIPT
         /// </summary>
         private XYPoint getWellXY(PlateTypeData plateType, SBSWellAddress well)
         {
@@ -264,7 +260,7 @@ namespace UKRobotics.D2.DispenseLib
 
         /// <summary>
         ///
-        /// NOTE THIS IS BASED/COPIED FROM THE WEB APP FROM THE JS FILE
+        /// NOTE THIS IS BASED/COPIED FROM THE WEB APP FROM THE JAVASCRIPT FILE
         /// dispense-protocol-lib.js func: toDispenseCommandsJson()
         /// 
         /// 
@@ -352,7 +348,7 @@ namespace UKRobotics.D2.DispenseLib
         }
 
         /// <summary>
-        /// NOTE THIS IS BASED/COPIED FROM THE WEB APP FROM THE JS FILE
+        /// NOTE THIS IS BASED/COPIED FROM THE WEB APP FROM THE JAVASCRIPT
         /// 
         /// </summary>
         /// <param name="valveNumber"></param>
@@ -397,7 +393,7 @@ namespace UKRobotics.D2.DispenseLib
             return wellLines;
         }
 
-        public List<string> CompileDispense(string deviceSerialId, string protocolId, dynamic plateType)
+        public List<string> CompileDispense(string deviceSerialId, string protocolId, PlateTypeData plateType)
         {
             ActiveCalibrationData calibration = D2DataAccess.GetActiveCalibrationData(deviceSerialId);
             ProtocolData protocol = D2DataAccess.GetProtocol(protocolId);
@@ -415,12 +411,15 @@ namespace UKRobotics.D2.DispenseLib
 
             try
             {
+                plateTypeGuid = plateTypeGuid.Trim();
+                protocolId = protocolId.Trim();
+
                 ClearMotorErrorFlags();
 
                 string deviceSerialId = ReadSerialIDFromDevice();
 
 
-                dynamic plateType = D2DataAccess.GetPlateTypeData(plateTypeGuid);
+                var plateType = D2DataAccess.GetPlateTypeData(plateTypeGuid);
                 List<string> dispenseCommands = null;
 
                 MethodInvokerThread dataAccessThread = new MethodInvokerThread(new MethodInvokerThread.MethodInvoker(
@@ -431,7 +430,7 @@ namespace UKRobotics.D2.DispenseLib
 
                 MethodInvokerThread zAndClampThread = new MethodInvokerThread(new MethodInvokerThread.MethodInvoker(() =>
                 {
-                    Distance plateHeight = new Distance((double)plateType.Height, DistanceUnitType.mm);
+                    Distance plateHeight = new Distance(plateType.Height, DistanceUnitType.mm);
                     Distance dispenseHeight = plateHeight + Distance.Parse("1mm");
                     MoveZToDispenseHeight(dispenseHeight);
 

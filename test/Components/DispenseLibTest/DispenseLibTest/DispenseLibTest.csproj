@@ -57,6 +57,7 @@
     <Compile Include="Common\JsonUtilsTest.cs" />
     <Compile Include="D2ControllerTest.cs" />
     <Compile Include="Calibration\CalibrationDataTest.cs" />
+    <Compile Include="IntegrationTests.cs" />
     <Compile Include="Labware\PlateTypeDataTest.cs" />
     <Compile Include="Protocol\ProtocolDataTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

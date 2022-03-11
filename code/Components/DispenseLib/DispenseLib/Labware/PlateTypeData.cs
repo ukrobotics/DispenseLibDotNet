@@ -49,6 +49,9 @@ namespace UKRobotics.D2.DispenseLib.Labware
         [DataMember]
         public double YOffsetA1 { get; set; }
 
+        [DataMember]
+        public double Height { get; set; }
+
         public static PlateTypeData FromJson(string json)
         {
             return JsonUtils.DeserializeObject<PlateTypeData>(json);

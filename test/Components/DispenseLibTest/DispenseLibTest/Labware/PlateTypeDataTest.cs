@@ -36,14 +36,15 @@ namespace UKRobotics.D2.DispenseLibTest.Labware
     {
 
         [Test]
-        public void Test()
+        public void Test1()
         {
 
             string PlateType1 = @"{
                   ""WellCount"": 6,
                   ""WellPitch"": 10.5,
                   ""XOffsetA1"": 20.2,
-                  ""YOffsetA1"": 10.1
+                  ""YOffsetA1"": 10.1,
+                  ""Height"": 12.5
                 }";
 
             PlateTypeData plateType = PlateTypeData.FromJson(PlateType1);
@@ -51,6 +52,22 @@ namespace UKRobotics.D2.DispenseLibTest.Labware
             Assert.AreEqual(10.5, plateType.WellPitch);
             Assert.AreEqual(20.2, plateType.XOffsetA1);
             Assert.AreEqual(10.1, plateType.YOffsetA1);
+            Assert.AreEqual(12.5, plateType.Height);
+
+        }
+
+        [Test]
+        public void Test2()
+        {
+
+            string PlateType1 = @"{""Id"":""3c0cdfed-19f9-430f-89e2-29ff7c5f1f20"",""Manufacturer"":"""",""PartNumber"":"""",""Name"":""Standard ANSI/SLAS Microplate with 96 wells"",""Url"":""https://www.slas.org/education/ansi-slas-microplate-standards/"",""Color"":""clear"",""WellCount"":96,""WellShape"":""round"",""WellBottomShape"":""f"",""WellPitch"":9,""WellDepth"":10,""WellDiameter"":8,""WellVolume"":50,""XOffsetA1"":14.38,""YOffsetA1"":11.24,""Height"":14.35,""GripPortrait"":82,""GripLandscape"":124,""StackHeightIncrement"":0,""SkirtHeight"":2.5,""SkirtY"":85.48,""SkirtX"":127.76,""ExternalClearanceToPlateBottom"":0}";
+
+            PlateTypeData plateType = PlateTypeData.FromJson(PlateType1);
+            Assert.AreEqual(96, plateType.WellCount);
+            Assert.AreEqual(9, plateType.WellPitch);
+            Assert.AreEqual(14.38, plateType.XOffsetA1);
+            Assert.AreEqual(11.24, plateType.YOffsetA1);
+            Assert.AreEqual(14.35, plateType.Height);
 
         }
     }
