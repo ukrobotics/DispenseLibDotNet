@@ -47,7 +47,15 @@ namespace UKRobotics.D2.DispenseLib.Calibration
         {
             ActiveCalibrationData calibrationDataDoc = JsonUtils.DeserializeObject<ActiveCalibrationData>(json);
 
+            UpdateVolumePerShots(calibrationDataDoc);
 
+            return calibrationDataDoc;
+        }
+
+        public static void UpdateVolumePerShots(ActiveCalibrationData calibrationDataDoc)
+        {
+            // The VolumePerShot value is required in the table to allow us to interpolate but it is not saved in the DB, so we need to 
+            // update ( apply density ) before we can use the calibration data.
             foreach (ChannelCalibration activeCalibration in calibrationDataDoc.Calibrations)
             {
                 foreach (CalibrationTable calibration in activeCalibration.Calibrations)
@@ -55,8 +63,6 @@ namespace UKRobotics.D2.DispenseLib.Calibration
                     calibration.UpdateVolumePerShots();
                 }
             }
-
-            return calibrationDataDoc;
         }
 
 
