@@ -68,14 +68,19 @@ namespace UKRobotics.D2.DispenseLib
         public IAxis Arm2 { get; set; }
 
 
-        public void OpenComms(string comPort, int baud=115200)
+        public void OpenComms(ControlConnection controlConnection)
         {
-            ControlConnection = new ControlConnection(comPort, baud);
+            ControlConnection = controlConnection;
             ControllerArms = new Controller(ControlConnection, ControllerNumberArms, 2);
             ControllerZ = new Controller(ControlConnection, ControllerNumberZAxis, 2);
             ZAxis = ControllerZ.GetAxis(AxisNumberZAxis);
             Arm1 = ControllerArms.GetAxis(1);
             Arm2 = ControllerArms.GetAxis(2);
+        }
+
+        public void OpenComms(string comPort, int baud=115200)
+        {
+            OpenComms(new ControlConnection(comPort, baud));
         }
 
         public void Dispose()
