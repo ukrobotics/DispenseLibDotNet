@@ -136,26 +136,31 @@ namespace UKRobotics.D2.DispenseLib
                 ZAxis.WaitForIsHomed(TimeSpan.FromSeconds(40));
             }
 
-            int heightMicrons = (int)dispenseHeight.GetValue(DistanceUnitType.um);
+            int heightMicrons = (int)Math.Round(dispenseHeight.GetValue(DistanceUnitType.um));
             ControlConnection.SendMessage("MOVE_Z", ControllerNumberZAxis, AxisNumberZAxis, heightMicrons);
             ZAxis.WaitForPositionSettledAndInRange(TimeSpan.FromSeconds(30));
         }
+
+        // public void MoveL(Distance x, Distance y)
+        // {
+        // }
 
         public void ParkArms()
         {
 
             ControlConnection.SendMessage("PARK", ControllerNumberArms, 0);
-            Thread.Sleep(100);
+            Thread.Sleep(500);
             Arm1.WaitForPositionSettledAndInRange(TimeSpan.FromSeconds(20));
             Arm2.WaitForPositionSettledAndInRange(TimeSpan.FromSeconds(20));
 
+            DisableArms();
         }
 
         public void UnparkArms()
         {
 
             ControlConnection.SendMessage("UNPARK", ControllerNumberArms, 0);
-            Thread.Sleep(100);
+            Thread.Sleep(500);
             Arm1.WaitForPositionSettledAndInRange(TimeSpan.FromSeconds(20));
             Arm2.WaitForPositionSettledAndInRange(TimeSpan.FromSeconds(20));
 
