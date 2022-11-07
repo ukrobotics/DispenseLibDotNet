@@ -41,15 +41,7 @@ using UKRobotics.MotorControllerLib;
 namespace UKRobotics.D2.DispenseLib
 {
 
-    /// <summary>
-    ///
-    /// This is the main class required to control/integrate the D2 dispenser.
-    ///
-    /// It will connect to the D2 via a COM / serial port that you specify.
-    ///
-    /// 
-    /// 
-    /// </summary>
+
     public class D2Controller : IDisposable
     {
 
@@ -114,15 +106,6 @@ namespace UKRobotics.D2.DispenseLib
 
         }
 
-        public void WriteSerialIDFromDevice(string serialId)
-        {
-
-            ControllerArms.Write(SerialIdParamId, serialId, true);
-
-            ControllerArms.SaveToFlash();
-
-        }
-
         public void SetClamp(bool clamped)
         {
             int commandValue = 0;
@@ -149,10 +132,6 @@ namespace UKRobotics.D2.DispenseLib
             ZAxis.WaitForPositionSettledAndInRange(TimeSpan.FromSeconds(30));
         }
 
-        // public void MoveL(Distance x, Distance y)
-        // {
-        // }
-
         public void ParkArms()
         {
 
@@ -171,7 +150,6 @@ namespace UKRobotics.D2.DispenseLib
             Thread.Sleep(500);
             Arm1.WaitForPositionSettledAndInRange(TimeSpan.FromSeconds(20));
             Arm2.WaitForPositionSettledAndInRange(TimeSpan.FromSeconds(20));
-
         }
 
         public void DisableZ()
@@ -262,7 +240,7 @@ namespace UKRobotics.D2.DispenseLib
         /// <summary>
         /// NOTE THIS IS BASED/COPIED FROM THE WEB APP FROM THE JAVASCRIPT
         /// </summary>
-        private XYPoint getWellXY(PlateTypeData plateType, SBSWellAddress well)
+        private XYPoint GetWellXY(PlateTypeData plateType, SBSWellAddress well)
         {
 
             Distance pitch = new Distance((double)plateType.WellPitch, DistanceUnitType.mm);
@@ -324,7 +302,7 @@ namespace UKRobotics.D2.DispenseLib
                     bool nonZeroDispenseOnLine = false;
                     foreach (var well in wellLine)
                     {
-                        XYPoint xy = getWellXY(plateType, well);
+                        XYPoint xy = GetWellXY(plateType, well);
 
                         var wellRequestString = "";
                         wellRequestString += $"{ (int)Math.Round(xy.X.GetValue(DistanceUnitType.um))}";
