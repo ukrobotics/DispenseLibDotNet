@@ -18,12 +18,6 @@ This codebase is currently in BETA - we welcome comments, feedback and collabora
 Versions numbers will follow the rules as defined here:
 [Semantic Versioning 2.0.0](https://semver.org/)
 
-## How do we create a release?
-~~~
-git tag -a v0.1.0 HEAD -m "My tag description..."
-git push origin v0.1.0
-~~~
-
 
 ## Codebase quick start
 There are two main C# solutions in this codebase as follows:
@@ -57,6 +51,12 @@ The protocol ID is created automatically when you edit and save a protocol from 
 The plate type ID is taken from our public labware library here: [https://labware.ukrobotics.app/](https://labware.ukrobotics.app/) . If you have an item of labware that is not currently in our library please contact us at info at ukrobotics.net.
 
 
+
+## How do we create a release?
+~~~
+git tag -a v0.1.0 HEAD -m "My tag description..."
+git push origin v0.1.0
+~~~
 
 
 

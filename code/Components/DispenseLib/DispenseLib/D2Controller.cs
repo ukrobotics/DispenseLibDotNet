@@ -41,7 +41,15 @@ using UKRobotics.MotorControllerLib;
 namespace UKRobotics.D2.DispenseLib
 {
 
-
+    /// <summary>
+    ///
+    /// The primary class for controlling the D2 dispenser.
+    ///
+    /// To get started, you need to call OpenComms and provide the com port to use.
+    /// Next, you can call RunDispense and provide the protocol ID and plate type ID.
+    /// 
+    /// 
+    /// </summary>
     public class D2Controller : IDisposable
     {
 
@@ -99,10 +107,156 @@ namespace UKRobotics.D2.DispenseLib
             ZAxis = null;
         }
 
+        /// <summary>
+        /// Each D2 has a unique ID number to identify the device.
+        /// </summary>
+        /// <returns></returns>
         public string ReadSerialIDFromDevice()
         {
-
             return ControllerArms.ReadString(SerialIdParamId);
+        }
+
+
+        /// <summary>
+        ///
+        /// Run a dispense and block until complete.
+        /// 
+        /// </summary>
+        /// <param name="protocolId">
+        /// The protocol ID is created automatically when you edit and save a protocol from the D2's software on [https://dispense.ukrobotics.app](https://dispense.ukrobotics.app)
+        /// </param>
+        /// <param name="plateTypeGuid">
+        /// The plate type ID is taken from our public labware library here: [https://labware.ukrobotics.app/](https://labware.ukrobotics.app/) . If you have an item of labware that is not currently in our library please contact us at info at ukrobotics.net.
+        /// </param>
+        public void RunDispense(string protocolId, string plateTypeGuid)
+        {
+
+            try
+            {
+                plateTypeGuid = plateTypeGuid.Trim();
+                protocolId = protocolId.Trim();
+
+                ClearMotorErrorFlags();
+
+                string deviceSerialId = ReadSerialIDFromDevice();
+
+
+                var plateType = D2DataAccess.GetPlateTypeData(plateTypeGuid);
+                List<string> dispenseCommands = null;
+
+                MethodInvokerThread dataAccessThread = new MethodInvokerThread(new MethodInvokerThread.MethodInvoker(
+                    () =>
+                    {
+                        dispenseCommands = CompileDispense(deviceSerialId, protocolId, plateType);
+                    }));
+
+                MethodInvokerThread zAndClampThread = new MethodInvokerThread(new MethodInvokerThread.MethodInvoker(() =>
+                {
+                    Distance plateHeight = new Distance(plateType.Height, DistanceUnitType.mm);
+                    Distance dispenseHeight = plateHeight + Distance.Parse("1mm");
+                    MoveZToDispenseHeight(dispenseHeight);
+
+                    SetClamp(true);
+                }));
+
+
+                dataAccessThread.StartThread();
+                zAndClampThread.StartThread();
+                dataAccessThread.JoinWithExceptionRethrow();
+                zAndClampThread.JoinWithExceptionRethrow();
+
+
+                foreach (string dispenseCommand in dispenseCommands)
+                {
+                    ControlConnection.SendMessageRaw(dispenseCommand, true, out bool success, out string errorMessage);
+                }
+
+
+                StartDispense(out TimeSpan dispenseDurationEstimate);// this is an under estimate of time that is returned!!
+                WaitForDispenseComplete(dispenseDurationEstimate);
+
+            }
+            finally
+            {
+                try
+                {
+                    DisableAllMotors();
+                }
+                catch
+                {
+                }
+                try
+                {
+                    SetClamp(false);
+                }
+                catch
+                {
+                }
+            }
+
+        }
+
+        /// <summary>
+        ///
+        /// Flush on the given valve with the given volume.
+        ///
+        /// 
+        /// 
+        /// </summary>
+        /// <param name="valveNumber"></param>
+        /// <param name="flushVolume"></param>
+        public void Flush(int valveNumber, Volume flushVolume)
+        {
+
+
+            try
+            {
+                ClearMotorErrorFlags();
+
+
+                ParkArms();
+                MoveZToDispenseHeight(Distance.Parse("10mm"));
+                DisableAllMotors();
+
+
+                string deviceSerialId = ReadSerialIDFromDevice();
+
+                var calibrationData = D2DataAccess.GetActiveCalibrationData(deviceSerialId);
+                int openTimeUsecs = calibrationData.GetCalibrationForValveNumber(valveNumber).VolumeToOpenTime(flushVolume);
+
+                string command = CreateValveCommand(valveNumber, openTimeUsecs, 1, 0);
+                ControlConnection.SendMessageRaw(command, true, out bool success, out string errorMessage);
+
+            }
+            finally
+            {
+                try
+                {
+                    DisableAllMotors();
+                }
+                catch
+                {
+                }
+                try
+                {
+                    SetClamp(false);
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        public void ShotRaw(int valveNumber, int openTimeUsecs)
+        {
+
+            string command = CreateValveCommand(valveNumber, openTimeUsecs, 1, 0);
+            ControlConnection.SendMessageRaw(command, true, out bool success, out string errorMessage);
+
+            if (!success)
+            {
+                throw new Exception(errorMessage);
+            }
 
         }
 
@@ -117,13 +271,24 @@ namespace UKRobotics.D2.DispenseLib
             ControlConnection.SendMessage("CLAMP", ControllerNumberZAxis, 0, commandValue);
         }
 
+        /// <summary>
+        ///
+        /// Move the valve head to the given dispense height relative to the base of the plate.
+        ///
+        /// Will block until move completed and will auto home the Z axis if required first.
+        ///
+        /// Note you do not need to explicitly use this method!  D2Controller.RunDispense() will move to the correct height for the plate type you specify.
+        /// This method is just provided for completeness.
+        /// 
+        /// </summary>
+        /// <param name="dispenseHeight">the height, <see cref="Distance.Parse(String)"/> if you want to create an instance from a string eg 10mm </param>
         public void MoveZToDispenseHeight(Distance dispenseHeight)
         {
 
             if (!ZAxis.ReadBoolean(ControllerParam.IsHomed))
             {
-                ZAxis.Home();
-                Thread.Sleep(1000);
+                ZAxis.Home();// the Z is not homed yet, so home it now...
+                Thread.Sleep(1000);// just a small wait to ensure the home action has started before we check for completion
                 ZAxis.WaitForIsHomed(TimeSpan.FromSeconds(40));
             }
 
@@ -397,137 +562,6 @@ namespace UKRobotics.D2.DispenseLib
             return CompileDispense(calibration, protocol, plateType);
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="protocolId">the guid for protocol</param>
-        /// <param name="plateTypeGuid">the guid for the plate type</param>
-        public void RunDispense(string protocolId, string plateTypeGuid)
-        {
-
-            try
-            {
-                plateTypeGuid = plateTypeGuid.Trim();
-                protocolId = protocolId.Trim();
-
-                ClearMotorErrorFlags();
-
-                string deviceSerialId = ReadSerialIDFromDevice();
-
-
-                var plateType = D2DataAccess.GetPlateTypeData(plateTypeGuid);
-                List<string> dispenseCommands = null;
-
-                MethodInvokerThread dataAccessThread = new MethodInvokerThread(new MethodInvokerThread.MethodInvoker(
-                    () =>
-                    {
-                        dispenseCommands = CompileDispense(deviceSerialId, protocolId, plateType);
-                    }));
-
-                MethodInvokerThread zAndClampThread = new MethodInvokerThread(new MethodInvokerThread.MethodInvoker(() =>
-                {
-                    Distance plateHeight = new Distance(plateType.Height, DistanceUnitType.mm);
-                    Distance dispenseHeight = plateHeight + Distance.Parse("1mm");
-                    MoveZToDispenseHeight(dispenseHeight);
-
-                    SetClamp(true);
-                }));
-
-
-                dataAccessThread.StartThread();
-                zAndClampThread.StartThread();
-                dataAccessThread.JoinWithExceptionRethrow();
-                zAndClampThread.JoinWithExceptionRethrow();
-
-
-                foreach (string dispenseCommand in dispenseCommands)
-                {
-                    ControlConnection.SendMessageRaw(dispenseCommand, true, out bool success, out string errorMessage);
-                }
-
-
-                StartDispense(out TimeSpan dispenseDurationEstimate);// this is an under estimate of time that is returned!!
-                WaitForDispenseComplete(dispenseDurationEstimate);
-
-            }
-            finally
-            {
-                try
-                {
-                    DisableAllMotors();
-                }
-                catch
-                {
-                }
-                try
-                {
-                    SetClamp(false);
-                }
-                catch
-                {
-                }
-            }
-
-        }
-
-        public void Flush(int valveNumber, Volume flushVolume)
-        {
-
-
-            try
-            {
-                ClearMotorErrorFlags();
-
-
-                ParkArms();
-                MoveZToDispenseHeight(Distance.Parse("10mm"));
-                DisableAllMotors();
-
-
-                string deviceSerialId = ReadSerialIDFromDevice();
-
-                var calibrationData = D2DataAccess.GetActiveCalibrationData(deviceSerialId);
-                int openTimeUsecs = calibrationData.GetCalibrationForValveNumber(valveNumber).VolumeToOpenTime(flushVolume);
-
-                string command = CreateValveCommand(valveNumber, openTimeUsecs, 1, 0);
-                ControlConnection.SendMessageRaw(command, true, out bool success, out string errorMessage);
-
-            }
-            finally
-            {
-                try
-                {
-                    DisableAllMotors();
-                }
-                catch
-                {
-                }
-                try
-                {
-                    SetClamp(false);
-                }
-                catch
-                {
-                }
-            }
-
-
-
-        }
-
-        public void ShotRaw(int valveNumber, int openTimeUsecs)
-        {
-
-            string command = CreateValveCommand(valveNumber, openTimeUsecs, 1, 0);
-            ControlConnection.SendMessageRaw(command, true, out bool success, out string errorMessage);
-
-            if (!success)
-            {
-                throw new Exception(errorMessage);
-            }
-
-
-        }
 
         public string CreateValveCommand(int valveNumber, int openTimeUsecs, int shotCount, int interShotTimeUSecs)
         {
