@@ -58,9 +58,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Calibration\ActiveCalibrationDataTest.cs" />
+    <Compile Include="Calibration\CalibrationTestUtils.cs" />
     <Compile Include="Common\JsonUtilsTest.cs" />
     <Compile Include="D2ControllerTest.cs" />
-    <Compile Include="Calibration\CalibrationDataTest.cs" />
+    <Compile Include="Calibration\CalibrationTableTest.cs" />
     <Compile Include="IntegrationTests.cs" />
     <Compile Include="Labware\PlateTypeDataTest.cs" />
     <Compile Include="Protocol\ProtocolDataTest.cs" />
