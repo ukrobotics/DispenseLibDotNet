@@ -45,7 +45,7 @@ jobs:
 
 
 
-      - name: Build the .Net Solution
+      - name: Build .Net Solution
         run: |
           utils\UKRobotics.BuildUtils\UKRobotics.DotNetBuildUtils.exe set-assembly-attributes code\Components\DispenseLib\DispenseLib\DispenseLib.csproj  AssemblyCompany "$env:AssemblyCompany" AssemblyFileVersion $env:AssemblyFileVersion AssemblyVersion $env:AssemblyVersion 
           type code\Components\DispenseLib\DispenseLib\Properties\AssemblyInfo.cs
@@ -55,7 +55,7 @@ jobs:
             AssemblyFileVersion: ${{ github.ref }}
             AssemblyCompany: UK ROBOTICS
 
-      - name: Build the TEST .Net Solution
+      - name: Build .Net unittest Solution
         run: msbuild test\Components\DispenseLibTest\DispenseLibTest.sln /p:Configuration=Release
         
       - name: Install NUnit.ConsoleRunner
