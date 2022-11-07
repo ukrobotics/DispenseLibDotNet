@@ -39,6 +39,9 @@ jobs:
         run: nuget restore code\Components\DispenseLib\DispenseLib.sln
 
       - name: Restore NuGet Packages
+        run: nuget restore code\Applications\DispenseCommandLine\DispenseCommandLine.sln
+
+      - name: Restore NuGet Packages
         run: nuget restore test\Components\DispenseLibTest\DispenseLibTest.sln
 
       - name: Build .Net Solution

@@ -41,6 +41,9 @@ jobs:
         run: nuget restore code\Components\DispenseLib\DispenseLib.sln
 
       - name: Restore NuGet Packages
+        run: nuget restore code\Applications\DispenseCommandLine\DispenseCommandLine.sln
+
+      - name: Restore NuGet Packages
         run: nuget restore test\Components\DispenseLibTest\DispenseLibTest.sln
 
 
@@ -50,6 +53,16 @@ jobs:
           utils\UKRobotics.BuildUtils\UKRobotics.DotNetBuildUtils.exe set-assembly-attributes code\Components\DispenseLib\DispenseLib\DispenseLib.csproj  AssemblyCompany "$env:AssemblyCompany" AssemblyFileVersion $env:AssemblyFileVersion AssemblyVersion $env:AssemblyVersion 
           type code\Components\DispenseLib\DispenseLib\Properties\AssemblyInfo.cs
           msbuild code\Components\DispenseLib\DispenseLib.sln /p:Configuration=Release
+        env:
+            AssemblyVersion: ${{ github.ref }}
+            AssemblyFileVersion: ${{ github.ref }}
+            AssemblyCompany: UK ROBOTICS
+            
+      - name: Build .Net Solution
+        run: |
+          utils\UKRobotics.BuildUtils\UKRobotics.DotNetBuildUtils.exe set-assembly-attributes code\Applications\DispenseCommandLine\DispenseCommandLine\DispenseCommandLine.csproj  AssemblyCompany "$env:AssemblyCompany" AssemblyFileVersion $env:AssemblyFileVersion AssemblyVersion $env:AssemblyVersion 
+          type code\Applications\DispenseCommandLine\DispenseCommandLine\Properties\AssemblyInfo.cs
+          msbuild code\Applications\DispenseCommandLine\DispenseCommandLine.sln /p:Configuration=Release
         env:
             AssemblyVersion: ${{ github.ref }}
             AssemblyFileVersion: ${{ github.ref }}
@@ -87,5 +100,15 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: code\Components\DispenseLib\DispenseLib\bin\Release\UKRobotics.D2.DispenseLib.dll
           asset_name: UKRobotics.D2.DispenseLib.dll
+          asset_content_type: application/octet-stream
+
+      - name: upload artifacts
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: code\Applications\DispenseCommandLine\DispenseCommandLine\bin\Release\DispenseCommandLine.exe
+          asset_name: DispenseCommandLine.exe
           asset_content_type: application/octet-stream
 
