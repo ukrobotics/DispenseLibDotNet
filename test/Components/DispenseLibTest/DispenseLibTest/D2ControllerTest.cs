@@ -48,7 +48,7 @@ namespace UKRobotics.D2.DispenseLibTest
             D2Controller controller = new D2Controller();
         
         
-            ActiveCalibrationData calibrationDataDoc = new ActiveCalibrationData();
+            ActiveCalibrationData activeCalibrationData = new ActiveCalibrationData();
         
             {
                 CalibrationTable calibration = new CalibrationTable();
@@ -57,7 +57,7 @@ namespace UKRobotics.D2.DispenseLibTest
                 calibration.Points.Add(new CalibrationPoint() { OpenTimeUSecs = 100, VolumePerShot = new Volume(100, VolumeUnitType.ul) });
                 calibration.Points.Add(new CalibrationPoint() { OpenTimeUSecs = 300, VolumePerShot = new Volume(300, VolumeUnitType.ul) });
                 calibration.Points.Add(new CalibrationPoint() { OpenTimeUSecs = 500, VolumePerShot = new Volume(500, VolumeUnitType.ul) });
-                calibrationDataDoc.Calibrations.Add(new ChannelCalibration(1, calibration));
+                activeCalibrationData.Calibrations.Add(new ChannelCalibration(1, calibration));
             }
         
             {
@@ -67,14 +67,14 @@ namespace UKRobotics.D2.DispenseLibTest
                 calibration.Points.Add(new CalibrationPoint() { OpenTimeUSecs = 100, VolumePerShot = new Volume(100, VolumeUnitType.ul) });
                 calibration.Points.Add(new CalibrationPoint() { OpenTimeUSecs = 300, VolumePerShot = new Volume(300, VolumeUnitType.ul) });
                 calibration.Points.Add(new CalibrationPoint() { OpenTimeUSecs = 500, VolumePerShot = new Volume(500, VolumeUnitType.ul) });
-                calibrationDataDoc.Calibrations.Add(new ChannelCalibration(2, calibration));
+                activeCalibrationData.Calibrations.Add(new ChannelCalibration(2, calibration));
             }
         
             ProtocolData protocol = ProtocolData.FromJson(ProtocolJson1);
             PlateTypeData plateType = PlateTypeData.FromJson(PlateType1);
         
             // ACT
-            var commands = controller.CompileDispense(calibrationDataDoc, protocol, plateType);
+            var commands = controller.CompileDispense(activeCalibrationData, protocol, plateType);
         
             foreach (var command in commands)
             {
