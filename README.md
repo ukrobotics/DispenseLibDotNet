@@ -12,7 +12,7 @@ Currently in BETA - we welcome comments, feedback and collaboration!
 ## Releases
 [Downloads/Releases](https://github.com/ukrobotics/DispenseLibDotNet/releases)
 
-## Version Numbers
+## Version numbers
 Versions numbers will follow the rules as defined here:
 [Semantic Versioning 2.0.0](https://semver.org/)
 

@@ -92,7 +92,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
 
-      - name: upload artifacts
+      - name: upload UKRobotics.D2.DispenseLib.dll
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -102,7 +102,7 @@ jobs:
           asset_name: UKRobotics.D2.DispenseLib.dll
           asset_content_type: application/octet-stream
 
-      - name: upload artifacts
+      - name: upload DispenseCommandLine.exe
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
