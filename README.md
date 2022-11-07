@@ -4,7 +4,7 @@
 
 
 ## Intro
-This library is intended to aid users and integrators to create their own software for the D2 dispenser.
+This library is intended to aid users and integrators to create their own software for UK Robotics' D2 dispenser.
 
 ## Status
 Currently in BETA - we welcome comments, feedback and collaboration!
