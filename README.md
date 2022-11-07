@@ -25,6 +25,24 @@ git push origin v0.1.0
 ~~~
 
 
+## Codebase quick start
+There are two main C# solutions in this codebase as follows:
+- dll:-  UKRobotics.D2.DispenseLib.dll :- consume this dll in your own codebase
+- exe:-  DispenseCommandLine.exe :- use this exe from scripts or to integrate into another application that supports running other scripts/programs. For example, one or our clients used this exe to run a D2 from Tecan Evoware...
+
+Integrating the D2 is very simple and can be done with 3 lines of code as shown below.
+
+~~~
+D2Controller controller = new D2Controller();
+
+controller.OpenComms("COM42");// open the given com port
+
+string protocolId = ""; // protocol UUID taken from https://dispense.ukrobotics.app . Create a protocol and then copy the UUID from the protocol metadata.
+string plateTypeId = "3c0cdfed-19f9-430f-89e2-29ff7c5f1f20"; // plate GUID from https://labware.ukrobotics.app , the example given here is for a standard ANSI/SLAS 96 well plate
+controller.RunDispense(protocolId, plateTypeId); // this will block until the protocol has run...
+~~~
+
+
 
 
 
