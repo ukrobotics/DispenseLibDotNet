@@ -41,7 +41,15 @@ using UKRobotics.MotorControllerLib;
 namespace UKRobotics.D2.DispenseLib
 {
 
-
+    /// <summary>
+    ///
+    /// This is the main class required to control/integrate the D2 dispenser.
+    ///
+    /// It will connect to the D2 via a COM / serial port that you specify.
+    ///
+    /// 
+    /// 
+    /// </summary>
     public class D2Controller : IDisposable
     {
 

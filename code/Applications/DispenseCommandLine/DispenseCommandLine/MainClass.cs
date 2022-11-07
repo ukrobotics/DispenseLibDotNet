@@ -34,6 +34,20 @@ using UKRobotics.D2.DispenseLib;
 namespace DispenseCommandLine
 {
 
+    /// <summary>
+    ///
+    /// The main() class for the EXE
+    ///
+    /// This EXE allows you to run the D2 dispenser from the command line by providing a COM port, a protocol ID and a plate type ID.
+    /// 
+    /// See the following example:
+    /// 
+    /// Example:
+    ///  DispenseCommandLine.exe -ComPort COM9 -ProtocolId d338f60cb0d79fb0d16c00966f373a58 -PlateTypeId 3c0cdfed-19f9-430f-89e2-29ff7c5f1f20
+    ///
+    /// The protocol id is taken from the webapp GUI, see the protocol meta info tab
+    /// The plate type id is the guid for the plate type. See this list of plate types https://labware.ukrobotics.app/  or on the webapp gui
+    /// </summary>
     class MainClass
     {
         private const int SuccessReturnCode = 0;
@@ -46,14 +60,6 @@ namespace DispenseCommandLine
 
         /// <summary>
         /// Main method
-        ///
-        /// Example:
-        ///  DispenseCommandLine.exe -ComPort COM9 -ProtocolId d338f60cb0d79fb0d16c00966f373a58 -PlateTypeId 3c0cdfed-19f9-430f-89e2-29ff7c5f1f20
-        ///
-        /// The protocol id is taken from the webapp GUI, see the protocol meta info tab
-        /// The plate type id is the guid for the plate type. See this list of plate types https://labware.ukrobotics.app/  or on the webapp gui
-        ///
-        /// 
         /// </summary>
         /// <param name="args">
         ///  
