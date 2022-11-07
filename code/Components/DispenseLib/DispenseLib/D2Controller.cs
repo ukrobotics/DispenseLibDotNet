@@ -59,6 +59,12 @@ namespace UKRobotics.D2.DispenseLib
             Ended = 1
         }
 
+        public enum ValveCommandState
+        {
+            Idle = 0,
+            Pending = 1
+        }
+
 
         public const int ControllerNumberArms = 1;
         public const int ControllerNumberZAxis = 2;
@@ -200,6 +206,10 @@ namespace UKRobotics.D2.DispenseLib
         ///
         /// Flush on the given valve with the given volume.
         ///
+        /// This will :
+        /// Park the arms
+        /// Move the Z axis to 10mm
+        ///
         /// 
         /// 
         /// </summary>
@@ -227,6 +237,8 @@ namespace UKRobotics.D2.DispenseLib
                 string command = CreateValveCommand(valveNumber, openTimeUsecs, 1, 0);
                 ControlConnection.SendMessageRaw(command, true, out bool success, out string errorMessage);
 
+                AwaitIdleValveState(TimeSpan.FromMilliseconds((double)openTimeUsecs/1000));
+
             }
             finally
             {
@@ -247,7 +259,42 @@ namespace UKRobotics.D2.DispenseLib
             }
         }
 
-        public void ShotRaw(int valveNumber, int openTimeUsecs)
+        /// <summary>
+        /// Awaits valve idle state
+        /// </summary>
+        /// <param name="timeout"></param>
+        /// <exception cref="Exception">on timeout</exception>
+        public void AwaitIdleValveState(TimeSpan timeout)
+        {
+            DateTime timeoutAt = DateTime.Now + timeout;
+
+            while (true)
+            {
+
+                ResponseMessage response = ControlConnection.SendMessage(
+                    $"GET_VALVE_STATE,${ControllerNumberArms},0");
+                response.GetParameter(0, out int i );
+                ValveCommandState state = (ValveCommandState) i;
+                if ( ValveCommandState.Idle == state )
+                {
+                    break;
+                }
+
+                if (DateTime.Now > timeoutAt)
+                {
+                    throw new Exception("Timeout waiting for valve idle state");
+                }
+
+                Thread.Sleep(100);
+            }
+        }
+
+        /// <summary>
+        /// Raw valve fire, by opentime only ( rather than volume)
+        /// </summary>
+        /// <param name="valveNumber"></param>
+        /// <param name="openTimeUsecs"></param>
+        public void FireValve(int valveNumber, int openTimeUsecs)
         {
 
             string command = CreateValveCommand(valveNumber, openTimeUsecs, 1, 0);
@@ -257,9 +304,12 @@ namespace UKRobotics.D2.DispenseLib
             {
                 throw new Exception(errorMessage);
             }
-
         }
 
+        /// <summary>
+        /// Set clamp to clamped or released
+        /// </summary>
+        /// <param name="clamped">true to clamp, false to release</param>
         public void SetClamp(bool clamped)
         {
             int commandValue = 0;
@@ -297,6 +347,9 @@ namespace UKRobotics.D2.DispenseLib
             ZAxis.WaitForPositionSettledAndInRange(TimeSpan.FromSeconds(30));
         }
 
+        /// <summary>
+        /// Park arms
+        /// </summary>
         public void ParkArms()
         {
 
@@ -308,6 +361,9 @@ namespace UKRobotics.D2.DispenseLib
             DisableArms();
         }
 
+        /// <summary>
+        /// Unpark arms
+        /// </summary>
         public void UnparkArms()
         {
 
@@ -317,17 +373,26 @@ namespace UKRobotics.D2.DispenseLib
             Arm2.WaitForPositionSettledAndInRange(TimeSpan.FromSeconds(20));
         }
 
+        /// <summary>
+        /// Disable Z Axis Motor
+        /// </summary>
         public void DisableZ()
         {
             ZAxis.SetMode(AxisControllerMode.Disabled);
         }
 
+        /// <summary>
+        /// Disable Arms Motor
+        /// </summary>
         public void DisableArms()
         {
             Arm1.SetMode(AxisControllerMode.Disabled);
             Arm2.SetMode(AxisControllerMode.Disabled);
         }
 
+        /// <summary>
+        /// Disable all motors
+        /// </summary>
         public void DisableAllMotors()
         {
             ZAxis.SetMode(AxisControllerMode.Disabled);
@@ -335,6 +400,9 @@ namespace UKRobotics.D2.DispenseLib
             Arm2.SetMode(AxisControllerMode.Disabled);
         }
 
+        /// <summary>
+        /// Clear error flags after arm or z axis motor being blocked.
+        /// </summary>
         public void ClearMotorErrorFlags()
         {
             ZAxis.Write(ControllerParam.ErrorCode, 0);
@@ -351,6 +419,13 @@ namespace UKRobotics.D2.DispenseLib
             durationEstimate = TimeSpan.FromMilliseconds(durationMillis);
         }
 
+        /// <summary>
+        ///
+        /// Wait for dispense protocol to be completed.
+        /// 
+        /// </summary>
+        /// <exception cref="Exception">on timeout</exception>
+        /// <param name="timeout"></param>
         public void WaitForDispenseComplete(TimeSpan timeout)
         {
             DateTime timeoutAt = DateTime.Now + timeout + TimeSpan.FromSeconds(30);
@@ -385,9 +460,8 @@ namespace UKRobotics.D2.DispenseLib
         }
 
         /// <summary>
-        /// COPY FROM JAVASCRIPT!!
-        /// COPY FROM JAVASCRIPT!!
-        /// COPY FROM JAVASCRIPT!!
+        /// This method provides the same value as the web based JS application and defines the delta distance ( error )
+        /// within which the valve will fire.
         /// 
         /// </summary>
         /// <param name="wellCount"></param>
