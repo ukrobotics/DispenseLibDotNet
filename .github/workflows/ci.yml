@@ -41,8 +41,11 @@ jobs:
       - name: Restore NuGet Packages
         run: nuget restore test\Components\DispenseLibTest\DispenseLibTest.sln
 
-      - name: Build the .Net Solution
+      - name: Build .Net Solution
         run: msbuild code\Components\DispenseLib\DispenseLib.sln /p:Configuration=Release
+
+      - name: Build .Net Solution
+        run: msbuild code\Applications\DispenseCommandLine\DispenseCommandLine.sln /p:Configuration=Release
 
       - name: Build the TEST .Net Solution
         run: msbuild test\Components\DispenseLibTest\DispenseLibTest.sln /p:Configuration=Release

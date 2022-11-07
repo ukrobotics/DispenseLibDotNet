@@ -12,6 +12,7 @@
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -31,20 +32,41 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="log4net">
+      <HintPath>..\..\..\..\ThirdParty\log4net\log4net.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
-    <Reference Include="UKRobotics.MotorControllerLib">
-      <HintPath>..\..\..\ThirdParty\UKRobotics\UKRobotics.MotorControllerLib.dll</HintPath>
+    <Reference Include="UKRobotics.Common">
+      <HintPath>..\..\..\..\ThirdParty\UKRobotics\UKRobotics.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="UKRobotics.MotorControllerLib, Version=0.1.46.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\ThirdParty\UKRobotics\UKRobotics.MotorControllerLib.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Common\JsonUtils.cs" />
+    <Compile Include="Common\SBSWellAddress.cs" />
+    <Compile Include="D2Constants.cs" />
+    <Compile Include="D2Controller.cs" />
+    <Compile Include="Calibration\ChannelCalibration.cs" />
+    <Compile Include="Calibration\CalibrationTable.cs" />
+    <Compile Include="Calibration\ActiveCalibrationData.cs" />
+    <Compile Include="Calibration\CalibrationPoint.cs" />
+    <Compile Include="DataAccess\D2DataAccess.cs" />
+    <Compile Include="Labware\PlateTypeData.cs" />
+    <Compile Include="Protocol\ProtocolData.cs" />
+    <Compile Include="Protocol\ProtocolWell.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
