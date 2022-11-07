@@ -6,8 +6,10 @@
 ## Intro
 This library is intended to aid users and integrators to create their own software for UK Robotics' D2 dispenser.
 
+For general user documentation for the D2, see here [D2 quick start docs](https://ukrobotics.tech/docs/d2dispenser/d2-quick-start/)
+
 ## Status
-Currently in BETA - we welcome comments, feedback and collaboration!
+This codebase is currently in BETA - we welcome comments, feedback and collaboration!
 
 ## Releases
 [Downloads/Releases](https://github.com/ukrobotics/DispenseLibDotNet/releases)
