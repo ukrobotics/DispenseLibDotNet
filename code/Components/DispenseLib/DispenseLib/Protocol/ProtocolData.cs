@@ -3,7 +3,6 @@ using System.Linq;
 using System.Runtime.Serialization;
 using UKRobotics.Common.Maths;
 using UKRobotics.D2.DispenseLib.Common;
-using UKRobotics.D2.DispenseLib.DataAccess;
 
 namespace UKRobotics.D2.DispenseLib.Protocol
 {

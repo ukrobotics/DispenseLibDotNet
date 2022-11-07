@@ -43,10 +43,10 @@ namespace UKRobotics.D2.DispenseLib
 
     /// <summary>
     ///
-    /// This is the main class required to control/integrate the D2 dispenser.
+    /// The primary class for controlling the D2 dispenser.
     ///
-    /// It will connect to the D2 via a COM / serial port that you specify.
-    ///
+    /// To get started, you need to call OpenComms and provide the com port to use.
+    /// Next, you can call RunDispense and provide the protocol ID and plate type ID.
     /// 
     /// 
     /// </summary>
@@ -57,6 +57,12 @@ namespace UKRobotics.D2.DispenseLib
         {
             Error = -1,
             Ended = 1
+        }
+
+        public enum ValveCommandState
+        {
+            Idle = 0,
+            Pending = 1
         }
 
 
@@ -107,22 +113,203 @@ namespace UKRobotics.D2.DispenseLib
             ZAxis = null;
         }
 
+        /// <summary>
+        /// Each D2 has a unique ID number to identify the device.
+        /// </summary>
+        /// <returns></returns>
         public string ReadSerialIDFromDevice()
         {
-
             return ControllerArms.ReadString(SerialIdParamId);
-
         }
 
-        public void WriteSerialIDFromDevice(string serialId)
+
+        /// <summary>
+        ///
+        /// Run a dispense and block until complete.
+        /// 
+        /// </summary>
+        /// <param name="protocolId">
+        /// The protocol ID is created automatically when you edit and save a protocol from the D2's software on [https://dispense.ukrobotics.app](https://dispense.ukrobotics.app)
+        /// </param>
+        /// <param name="plateTypeGuid">
+        /// The plate type ID is taken from our public labware library here: [https://labware.ukrobotics.app/](https://labware.ukrobotics.app/) . If you have an item of labware that is not currently in our library please contact us at info at ukrobotics.net.
+        /// </param>
+        public void RunDispense(string protocolId, string plateTypeGuid)
         {
 
-            ControllerArms.Write(SerialIdParamId, serialId, true);
+            try
+            {
+                plateTypeGuid = plateTypeGuid.Trim();
+                protocolId = protocolId.Trim();
 
-            ControllerArms.SaveToFlash();
+                ClearMotorErrorFlags();
+
+                string deviceSerialId = ReadSerialIDFromDevice();
+
+
+                var plateType = D2DataAccess.GetPlateTypeData(plateTypeGuid);
+                List<string> dispenseCommands = null;
+
+                MethodInvokerThread dataAccessThread = new MethodInvokerThread(new MethodInvokerThread.MethodInvoker(
+                    () =>
+                    {
+                        dispenseCommands = CompileDispense(deviceSerialId, protocolId, plateType);
+                    }));
+
+                MethodInvokerThread zAndClampThread = new MethodInvokerThread(new MethodInvokerThread.MethodInvoker(() =>
+                {
+                    Distance plateHeight = new Distance(plateType.Height, DistanceUnitType.mm);
+                    Distance dispenseHeight = plateHeight + Distance.Parse("1mm");
+                    MoveZToDispenseHeight(dispenseHeight);
+
+                    SetClamp(true);
+                }));
+
+
+                dataAccessThread.StartThread();
+                zAndClampThread.StartThread();
+                dataAccessThread.JoinWithExceptionRethrow();
+                zAndClampThread.JoinWithExceptionRethrow();
+
+
+                foreach (string dispenseCommand in dispenseCommands)
+                {
+                    ControlConnection.SendMessageRaw(dispenseCommand, true, out bool success, out string errorMessage);
+                }
+
+
+                StartDispense(out TimeSpan dispenseDurationEstimate);// this is an under estimate of time that is returned!!
+                WaitForDispenseComplete(dispenseDurationEstimate);
+
+            }
+            finally
+            {
+                try
+                {
+                    DisableAllMotors();
+                }
+                catch
+                {
+                }
+                try
+                {
+                    SetClamp(false);
+                }
+                catch
+                {
+                }
+            }
 
         }
 
+        /// <summary>
+        ///
+        /// Flush on the given valve with the given volume.
+        ///
+        /// This will :
+        /// Park the arms
+        /// Move the Z axis to 10mm
+        ///
+        /// 
+        /// 
+        /// </summary>
+        /// <param name="valveNumber"></param>
+        /// <param name="flushVolume"></param>
+        public void Flush(int valveNumber, Volume flushVolume)
+        {
+
+
+            try
+            {
+                ClearMotorErrorFlags();
+
+
+                ParkArms();
+                MoveZToDispenseHeight(Distance.Parse("10mm"));
+                DisableAllMotors();
+
+
+                string deviceSerialId = ReadSerialIDFromDevice();
+
+                var calibrationData = D2DataAccess.GetActiveCalibrationData(deviceSerialId);
+                int openTimeUsecs = calibrationData.GetCalibrationForValveNumber(valveNumber).VolumeToOpenTime(flushVolume);
+
+                string command = CreateValveCommand(valveNumber, openTimeUsecs, 1, 0);
+                ControlConnection.SendMessageRaw(command, true, out bool success, out string errorMessage);
+
+                AwaitIdleValveState(TimeSpan.FromMilliseconds((double)openTimeUsecs/1000));
+
+            }
+            finally
+            {
+                try
+                {
+                    DisableAllMotors();
+                }
+                catch
+                {
+                }
+                try
+                {
+                    SetClamp(false);
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        /// <summary>
+        /// Awaits valve idle state
+        /// </summary>
+        /// <param name="timeout"></param>
+        /// <exception cref="Exception">on timeout</exception>
+        public void AwaitIdleValveState(TimeSpan timeout)
+        {
+            DateTime timeoutAt = DateTime.Now + timeout;
+
+            while (true)
+            {
+
+                ResponseMessage response = ControlConnection.SendMessage(
+                    $"GET_VALVE_STATE,${ControllerNumberArms},0");
+                response.GetParameter(0, out int i );
+                ValveCommandState state = (ValveCommandState) i;
+                if ( ValveCommandState.Idle == state )
+                {
+                    break;
+                }
+
+                if (DateTime.Now > timeoutAt)
+                {
+                    throw new Exception("Timeout waiting for valve idle state");
+                }
+
+                Thread.Sleep(100);
+            }
+        }
+
+        /// <summary>
+        /// Raw valve fire, by opentime only ( rather than volume)
+        /// </summary>
+        /// <param name="valveNumber"></param>
+        /// <param name="openTimeUsecs"></param>
+        public void FireValve(int valveNumber, int openTimeUsecs)
+        {
+
+            string command = CreateValveCommand(valveNumber, openTimeUsecs, 1, 0);
+            ControlConnection.SendMessageRaw(command, true, out bool success, out string errorMessage);
+
+            if (!success)
+            {
+                throw new Exception(errorMessage);
+            }
+        }
+
+        /// <summary>
+        /// Set clamp to clamped or released
+        /// </summary>
+        /// <param name="clamped">true to clamp, false to release</param>
         public void SetClamp(bool clamped)
         {
             int commandValue = 0;
@@ -134,13 +321,24 @@ namespace UKRobotics.D2.DispenseLib
             ControlConnection.SendMessage("CLAMP", ControllerNumberZAxis, 0, commandValue);
         }
 
+        /// <summary>
+        ///
+        /// Move the valve head to the given dispense height relative to the base of the plate.
+        ///
+        /// Will block until move completed and will auto home the Z axis if required first.
+        ///
+        /// Note you do not need to explicitly use this method!  D2Controller.RunDispense() will move to the correct height for the plate type you specify.
+        /// This method is just provided for completeness.
+        /// 
+        /// </summary>
+        /// <param name="dispenseHeight">the height, <see cref="Distance.Parse(String)"/> if you want to create an instance from a string eg 10mm </param>
         public void MoveZToDispenseHeight(Distance dispenseHeight)
         {
 
             if (!ZAxis.ReadBoolean(ControllerParam.IsHomed))
             {
-                ZAxis.Home();
-                Thread.Sleep(1000);
+                ZAxis.Home();// the Z is not homed yet, so home it now...
+                Thread.Sleep(1000);// just a small wait to ensure the home action has started before we check for completion
                 ZAxis.WaitForIsHomed(TimeSpan.FromSeconds(40));
             }
 
@@ -149,10 +347,9 @@ namespace UKRobotics.D2.DispenseLib
             ZAxis.WaitForPositionSettledAndInRange(TimeSpan.FromSeconds(30));
         }
 
-        // public void MoveL(Distance x, Distance y)
-        // {
-        // }
-
+        /// <summary>
+        /// Park arms
+        /// </summary>
         public void ParkArms()
         {
 
@@ -164,6 +361,9 @@ namespace UKRobotics.D2.DispenseLib
             DisableArms();
         }
 
+        /// <summary>
+        /// Unpark arms
+        /// </summary>
         public void UnparkArms()
         {
 
@@ -171,20 +371,28 @@ namespace UKRobotics.D2.DispenseLib
             Thread.Sleep(500);
             Arm1.WaitForPositionSettledAndInRange(TimeSpan.FromSeconds(20));
             Arm2.WaitForPositionSettledAndInRange(TimeSpan.FromSeconds(20));
-
         }
 
+        /// <summary>
+        /// Disable Z Axis Motor
+        /// </summary>
         public void DisableZ()
         {
             ZAxis.SetMode(AxisControllerMode.Disabled);
         }
 
+        /// <summary>
+        /// Disable Arms Motor
+        /// </summary>
         public void DisableArms()
         {
             Arm1.SetMode(AxisControllerMode.Disabled);
             Arm2.SetMode(AxisControllerMode.Disabled);
         }
 
+        /// <summary>
+        /// Disable all motors
+        /// </summary>
         public void DisableAllMotors()
         {
             ZAxis.SetMode(AxisControllerMode.Disabled);
@@ -192,6 +400,9 @@ namespace UKRobotics.D2.DispenseLib
             Arm2.SetMode(AxisControllerMode.Disabled);
         }
 
+        /// <summary>
+        /// Clear error flags after arm or z axis motor being blocked.
+        /// </summary>
         public void ClearMotorErrorFlags()
         {
             ZAxis.Write(ControllerParam.ErrorCode, 0);
@@ -208,6 +419,13 @@ namespace UKRobotics.D2.DispenseLib
             durationEstimate = TimeSpan.FromMilliseconds(durationMillis);
         }
 
+        /// <summary>
+        ///
+        /// Wait for dispense protocol to be completed.
+        /// 
+        /// </summary>
+        /// <exception cref="Exception">on timeout</exception>
+        /// <param name="timeout"></param>
         public void WaitForDispenseComplete(TimeSpan timeout)
         {
             DateTime timeoutAt = DateTime.Now + timeout + TimeSpan.FromSeconds(30);
@@ -242,9 +460,8 @@ namespace UKRobotics.D2.DispenseLib
         }
 
         /// <summary>
-        /// COPY FROM JAVASCRIPT!!
-        /// COPY FROM JAVASCRIPT!!
-        /// COPY FROM JAVASCRIPT!!
+        /// This method provides the same value as the web based JS application and defines the delta distance ( error )
+        /// within which the valve will fire.
         /// 
         /// </summary>
         /// <param name="wellCount"></param>
@@ -262,7 +479,7 @@ namespace UKRobotics.D2.DispenseLib
         /// <summary>
         /// NOTE THIS IS BASED/COPIED FROM THE WEB APP FROM THE JAVASCRIPT
         /// </summary>
-        private XYPoint getWellXY(PlateTypeData plateType, SBSWellAddress well)
+        private XYPoint GetWellXY(PlateTypeData plateType, SBSWellAddress well)
         {
 
             Distance pitch = new Distance((double)plateType.WellPitch, DistanceUnitType.mm);
@@ -324,7 +541,7 @@ namespace UKRobotics.D2.DispenseLib
                     bool nonZeroDispenseOnLine = false;
                     foreach (var well in wellLine)
                     {
-                        XYPoint xy = getWellXY(plateType, well);
+                        XYPoint xy = GetWellXY(plateType, well);
 
                         var wellRequestString = "";
                         wellRequestString += $"{ (int)Math.Round(xy.X.GetValue(DistanceUnitType.um))}";
@@ -419,137 +636,6 @@ namespace UKRobotics.D2.DispenseLib
             return CompileDispense(calibration, protocol, plateType);
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="protocolId">the guid for protocol</param>
-        /// <param name="plateTypeGuid">the guid for the plate type</param>
-        public void RunDispense(string protocolId, string plateTypeGuid)
-        {
-
-            try
-            {
-                plateTypeGuid = plateTypeGuid.Trim();
-                protocolId = protocolId.Trim();
-
-                ClearMotorErrorFlags();
-
-                string deviceSerialId = ReadSerialIDFromDevice();
-
-
-                var plateType = D2DataAccess.GetPlateTypeData(plateTypeGuid);
-                List<string> dispenseCommands = null;
-
-                MethodInvokerThread dataAccessThread = new MethodInvokerThread(new MethodInvokerThread.MethodInvoker(
-                    () =>
-                    {
-                        dispenseCommands = CompileDispense(deviceSerialId, protocolId, plateType);
-                    }));
-
-                MethodInvokerThread zAndClampThread = new MethodInvokerThread(new MethodInvokerThread.MethodInvoker(() =>
-                {
-                    Distance plateHeight = new Distance(plateType.Height, DistanceUnitType.mm);
-                    Distance dispenseHeight = plateHeight + Distance.Parse("1mm");
-                    MoveZToDispenseHeight(dispenseHeight);
-
-                    SetClamp(true);
-                }));
-
-
-                dataAccessThread.StartThread();
-                zAndClampThread.StartThread();
-                dataAccessThread.JoinWithExceptionRethrow();
-                zAndClampThread.JoinWithExceptionRethrow();
-
-
-                foreach (string dispenseCommand in dispenseCommands)
-                {
-                    ControlConnection.SendMessageRaw(dispenseCommand, true, out bool success, out string errorMessage);
-                }
-
-
-                StartDispense(out TimeSpan dispenseDurationEstimate);// this is an under estimate of time that is returned!!
-                WaitForDispenseComplete(dispenseDurationEstimate);
-
-            }
-            finally
-            {
-                try
-                {
-                    DisableAllMotors();
-                }
-                catch
-                {
-                }
-                try
-                {
-                    SetClamp(false);
-                }
-                catch
-                {
-                }
-            }
-
-        }
-
-        public void Flush(int valveNumber, Volume flushVolume)
-        {
-
-
-            try
-            {
-                ClearMotorErrorFlags();
-
-
-                ParkArms();
-                MoveZToDispenseHeight(Distance.Parse("10mm"));
-                DisableAllMotors();
-
-
-                string deviceSerialId = ReadSerialIDFromDevice();
-
-                var calibrationData = D2DataAccess.GetActiveCalibrationData(deviceSerialId);
-                int openTimeUsecs = calibrationData.GetCalibrationForValveNumber(valveNumber).VolumeToOpenTime(flushVolume);
-
-                string command = CreateValveCommand(valveNumber, openTimeUsecs, 1, 0);
-                ControlConnection.SendMessageRaw(command, true, out bool success, out string errorMessage);
-
-            }
-            finally
-            {
-                try
-                {
-                    DisableAllMotors();
-                }
-                catch
-                {
-                }
-                try
-                {
-                    SetClamp(false);
-                }
-                catch
-                {
-                }
-            }
-
-
-
-        }
-
-        public void ShotRaw(int valveNumber, int openTimeUsecs)
-        {
-
-            string command = CreateValveCommand(valveNumber, openTimeUsecs, 1, 0);
-            ControlConnection.SendMessageRaw(command, true, out bool success, out string errorMessage);
-
-            if (!success)
-            {
-                throw new Exception(errorMessage);
-            }
-
-
-        }
 
         public string CreateValveCommand(int valveNumber, int openTimeUsecs, int shotCount, int interShotTimeUSecs)
         {

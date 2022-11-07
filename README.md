@@ -18,11 +18,8 @@ This codebase is currently in BETA - we welcome comments, feedback and collabora
 Versions numbers will follow the rules as defined here:
 [Semantic Versioning 2.0.0](https://semver.org/)
 
-## How do we create a release?
-~~~
-git tag -a v0.1.0 HEAD -m "My tag description..."
-git push origin v0.1.0
-~~~
+## Units of measure
+This codebase uses strong value types for units where possible, such as Distance, Volume etc.  These take SI metric units such as mm, m for distance and l,ml,ul,nl and pl for volumes. We always like to use strong value types in our codebase as this reduces the chance of unit confusions, especially on API interefaces! 
 
 
 ## Codebase quick start
@@ -57,6 +54,12 @@ The protocol ID is created automatically when you edit and save a protocol from 
 The plate type ID is taken from our public labware library here: [https://labware.ukrobotics.app/](https://labware.ukrobotics.app/) . If you have an item of labware that is not currently in our library please contact us at info at ukrobotics.net.
 
 
+
+## How do we create a release?
+~~~
+git tag -a v0.1.0 HEAD -m "My tag description..."
+git push origin v0.1.0
+~~~
 
 
 
