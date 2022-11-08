@@ -13,7 +13,7 @@ namespace UKRobotics.D2.DispenseLibTest
 
         [Test]
         [Explicit]
-        public void Test1()
+        public void TestRunDispense()
         {
 
             using (D2Controller controller = new D2Controller())
@@ -39,31 +39,13 @@ namespace UKRobotics.D2.DispenseLibTest
                 controller.OpenComms("COM7");
 
                 controller.Flush(1, Volume.Parse("100ul"));
+                controller.Flush(2, Volume.Parse("100ul"));
 
             }
 
 
         }
 
-        [Test]
-        [Explicit]
-        public void TestTemp()
-        {
-
-            using (D2Controller controller = new D2Controller())
-            {
-                controller.OpenComms("COM18", 115200);
-
-                
-                Console.WriteLine(controller.ControllerArms.ReadString(ControllerParam.UserData1));
-                Console.WriteLine(controller.ControllerArms.ReadString(ControllerParam.UserData1+1));
-                Console.WriteLine(controller.ControllerArms.ReadString(ControllerParam.UserData1+2));
-                Console.WriteLine(controller.ControllerArms.ReadString(ControllerParam.UserData1+3));
-
-            }
-
-
-        }
 
     }
 }
