@@ -29,6 +29,7 @@ For support - please contact us at  www.ukrobotics.com
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using UKRobotics.Common.Enums;
 using UKRobotics.Common.Maths;
 using UKRobotics.Common.Threading;
 using UKRobotics.D2.DispenseLib.Calibration;
@@ -236,8 +237,12 @@ namespace UKRobotics.D2.DispenseLib
 
                 string command = CreateValveCommand(valveNumber, openTimeUsecs, 1, 0);
                 ControlConnection.SendMessageRaw(command, true, out bool success, out string errorMessage);
+                if (!success)
+                {
+                    throw new Exception(errorMessage);
+                }
 
-                AwaitIdleValveState(TimeSpan.FromMilliseconds((double)openTimeUsecs/1000));
+                AwaitIdleValveState(TimeSpan.FromMilliseconds(((double)openTimeUsecs / 1000) + 250) );
 
             }
             finally
@@ -271,9 +276,9 @@ namespace UKRobotics.D2.DispenseLib
             while (true)
             {
 
-                ResponseMessage response = ControlConnection.SendMessage(
-                    $"GET_VALVE_STATE,${ControllerNumberArms},0");
-                response.GetParameter(0, out int i );
+                ResponseMessage response = ControlConnection.SendMessageRaw(
+                    $"GET_VALVE_STATE,{ControllerNumberArms},0", true, out bool success, out string errorMessage);
+                response.GetParameter( 0, out int i );
                 ValveCommandState state = (ValveCommandState) i;
                 if ( ValveCommandState.Idle == state )
                 {
