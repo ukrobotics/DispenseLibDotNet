@@ -47,5 +47,29 @@ namespace UKRobotics.D2.DispenseLibTest
         }
 
 
+        [Test]
+        [Explicit]
+        public void TestMisc()
+        {
+
+            using (D2Controller controller = new D2Controller())
+            {
+                controller.OpenComms("COM7");
+
+                var controlConnection = controller.ControlConnection;
+                var response = controlConnection.SendMessageRaw(
+                    "VI,2,0", true, out bool success, out string errorMessage);
+
+                response.GetParameter(0, out int i1);
+                response.GetParameter(1, out int i2);
+                Console.WriteLine(i1);
+                Console.WriteLine(i2);
+
+            }
+
+
+        }
+
+
     }
 }
