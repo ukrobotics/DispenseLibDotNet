@@ -19,7 +19,7 @@ Versions numbers will follow the rules as defined here:
 [Semantic Versioning 2.0.0](https://semver.org/)
 
 ## Units of measure
-This codebase uses strong value types for units where possible, such as Distance, Volume etc.  These take SI metric units such as mm, m for distance and l,ml,ul,nl and pl for volumes. We always like to use strong value types in our codebase as this reduces the chance of unit confusions, especially on API interefaces! 
+This codebase uses strong value types for units where possible, such as Distance, Volume etc.  These take SI metric units such as mm, m for distance and l,ml,ul,nl and pl for volumes. We always like to use strong value types in our codebase as this reduces the chance of unit confusions, especially on API interfaces! 
 
 
 ## Codebase quick start
@@ -49,7 +49,23 @@ However you can also run many other commands if you wish, such as:
 - GetDispenseState:-  Will return the state of a running dispense. See the Enum called DispenseState
 - AwaitIdleValveState:-  Will return when the valve is idle to allow you to chain following commands easily
 
-**Want low level commands???**  If you want to define your own dispense protocol on the fly you can do this. You don't need to run a dispense protocol as defined by the GUI. For example, you can pull a dispense table from your own DB, then have this passed down to the D2 to be run. See the method RunDispense(string protocolId, string plateTypeGuid) for how our API does this and get in touch if you need support.
+**Dynamic Protocol Generation**  
+If you want to define your own dispense protocol on the fly you can do this. You don't need to run a dispense protocol as defined by the GUI. For example, you can pull a dispense table from your own DB, then have this passed down to the D2 to be run. 
+See the following method and classes for how our API does this and get in touch if you need support. We are always happy and on hand to help.
+~~~
+Methods:
+
+RunDispense(string protocolId, string plateTypeGuid) 
+
+and
+
+CompileDispense(string deviceSerialId, string protocolId, PlateTypeData plateType)
+
+
+Class:  ProtocolData
+
+~~~
+
 
 ### DispenseCommandLine.exe
 The exe allows you to run the D2 from a script or from a 3rd party application, such as a 3rd party scheduler or for example a liquid handler application, without writing any code yourself.
