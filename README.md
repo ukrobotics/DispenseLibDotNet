@@ -29,6 +29,8 @@ There are two main C# solutions in this codebase as follows:
 
 
 ### UKRobotics.D2.DispenseLib.dll
+The class D2Controller is the primary class you will use to control the D2.
+
 Integrating the D2 into your software is very simple and can be done with 3 lines of code as shown below.
 
 ~~~
@@ -40,6 +42,14 @@ string protocolId = ""; // protocol UUID taken from https://dispense.ukrobotics.
 string plateTypeId = "3c0cdfed-19f9-430f-89e2-29ff7c5f1f20"; // plate GUID from https://labware.ukrobotics.app , the example given here is for a standard ANSI/SLAS 96 well plate
 controller.RunDispense(protocolId, plateTypeId); // this will block until the protocol has run...
 ~~~
+
+However you can also run many other commands if you wish, such as:
+- Park and Unpark:-  These commands will park/unpark the arms into the parking hook. This is generally never required as the D2 will automatically park and unpark the arms when you run a dispense protocol.
+- Flush:-  This will flush the given valve with the given flush volume.  The D2 will park the arms over the waste before the flush begins.
+- GetDispenseState:-  Will return the state of a running dispense. See the Enum called DispenseState
+- AwaitIdleValveState:-  Will return when the valve is idle to allow you to chain following commands easily
+
+**Want low level commands???**  If you want to define your own dispense protocol on the fly you can do this. You don't need to run a dispense protocol as defined by the GUI. For example, you can pull a dispense table from your own DB, then have this passed down to the D2 to be run. See the method RunDispense(string protocolId, string plateTypeGuid) for how our API does this and get in touch if you need support.
 
 ### DispenseCommandLine.exe
 The exe allows you to run the D2 from a script or from a 3rd party application, such as a 3rd party scheduler or for example a liquid handler application, without writing any code yourself.
