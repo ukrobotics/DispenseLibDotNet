@@ -67,9 +67,6 @@ namespace UKRobotics.D2.DispenseLib
         }
 
 
-        public const int ControllerNumberArms = 1;
-        public const int ControllerNumberZAxis = 2;
-        public const int AxisNumberZAxis = 1;
         public const int ValveCount = 2;
 
 
@@ -82,12 +79,33 @@ namespace UKRobotics.D2.DispenseLib
         public IAxis Arm1 { get; set; }
         public IAxis Arm2 { get; set; }
 
+        public int ControllerNumberArms { get; protected set; } = 1;
+        public int ControllerNumberZAxis { get; protected set; } = 2;
+        public int AxisNumberZAxis { get; protected set; } = 1;
+        public int ControllerAxisCount { get; protected set; } = 2;
+
+
+        public D2Controller()
+        {
+            // default ctor
+        }
+
+        protected D2Controller(
+            int controllerNumberZAxis = 2, 
+            int axisNumberZAxis = 1,
+            int controllerAxisCount = 2)
+        {
+            ControllerNumberZAxis = controllerNumberZAxis;
+            AxisNumberZAxis = axisNumberZAxis;
+            ControllerAxisCount = controllerAxisCount;
+        }
+
 
         public void OpenComms(ControlConnection controlConnection)
         {
             ControlConnection = controlConnection;
-            ControllerArms = new Controller(ControlConnection, ControllerNumberArms, 2);
-            ControllerZ = new Controller(ControlConnection, ControllerNumberZAxis, 2);
+            ControllerArms = new Controller(ControlConnection, ControllerNumberArms, ControllerAxisCount);
+            ControllerZ = new Controller(ControlConnection, ControllerNumberZAxis, ControllerAxisCount);
             ZAxis = ControllerZ.GetAxis(AxisNumberZAxis);
             Arm1 = ControllerArms.GetAxis(1);
             Arm2 = ControllerArms.GetAxis(2);
@@ -357,6 +375,8 @@ namespace UKRobotics.D2.DispenseLib
         /// </summary>
         public void ParkArms()
         {
+            //clear motor error flags before try park/unpark to clear any prev errors
+            ClearMotorErrorFlags();
 
             ControlConnection.SendMessage("PARK", ControllerNumberArms, 0);
             Thread.Sleep(500);
@@ -371,6 +391,8 @@ namespace UKRobotics.D2.DispenseLib
         /// </summary>
         public void UnparkArms()
         {
+            //clear motor error flags before try park/unpark to clear any prev errors
+            ClearMotorErrorFlags();
 
             ControlConnection.SendMessage("UNPARK", ControllerNumberArms, 0);
             Thread.Sleep(500);
