@@ -4,7 +4,6 @@ using UKRobotics.Common.Maths;
 using UKRobotics.D2.DispenseLib;
 using UKRobotics.D2.DispenseLib.DataAccess;
 using UKRobotics.D2.DispenseLib.Protocol;
-using UKRobotics.MotorControllerLib;
 
 namespace UKRobotics.D2.DispenseLibTest
 {
@@ -20,7 +19,7 @@ namespace UKRobotics.D2.DispenseLibTest
 
             using (D2Controller controller = new D2Controller())
             {
-                controller.OpenComms("COM18", 115200);
+                controller.OpenComms("COM7", 115200);
 
                 Console.WriteLine(controller.ReadSerialIDFromDevice());
 
