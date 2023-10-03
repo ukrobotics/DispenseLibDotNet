@@ -2,6 +2,8 @@
 using NUnit.Framework;
 using UKRobotics.Common.Maths;
 using UKRobotics.D2.DispenseLib;
+using UKRobotics.D2.DispenseLib.DataAccess;
+using UKRobotics.D2.DispenseLib.Protocol;
 using UKRobotics.MotorControllerLib;
 
 namespace UKRobotics.D2.DispenseLibTest
@@ -26,6 +28,16 @@ namespace UKRobotics.D2.DispenseLibTest
 
             }
 
+
+        }
+
+        [Test]
+        [Explicit]
+        public void TestGetProtocolInvalidId()
+        {
+
+            ProtocolData protocolData = D2DataAccess.GetProtocol("14f7fcb6f7be8f4676bcbd4b7c260000");
+            Assert.IsNull(protocolData );
 
         }
 
