@@ -2,7 +2,8 @@
 using NUnit.Framework;
 using UKRobotics.Common.Maths;
 using UKRobotics.D2.DispenseLib;
-using UKRobotics.MotorControllerLib;
+using UKRobotics.D2.DispenseLib.DataAccess;
+using UKRobotics.D2.DispenseLib.Protocol;
 
 namespace UKRobotics.D2.DispenseLibTest
 {
@@ -18,7 +19,7 @@ namespace UKRobotics.D2.DispenseLibTest
 
             using (D2Controller controller = new D2Controller())
             {
-                controller.OpenComms("COM18", 115200);
+                controller.OpenComms("COM7", 115200);
 
                 Console.WriteLine(controller.ReadSerialIDFromDevice());
 
@@ -26,6 +27,16 @@ namespace UKRobotics.D2.DispenseLibTest
 
             }
 
+
+        }
+
+        [Test]
+        [Explicit]
+        public void TestGetProtocolInvalidId()
+        {
+
+            ProtocolData protocolData = D2DataAccess.GetProtocol("14f7fcb6f7be8f4676bcbd4b7c260000");
+            Assert.IsNull(protocolData );
 
         }
 
