@@ -30,6 +30,8 @@ For support - please contact us at  www.ukrobotics.com
 using System;
 using UKRobotics.Common;
 using UKRobotics.D2.DispenseLib;
+using UKRobotics.D2.DispenseLib.DataAccess;
+using UKRobotics.D2.DispenseLib.Protocol;
 
 namespace DispenseCommandLine
 {
@@ -38,15 +40,8 @@ namespace DispenseCommandLine
     ///
     /// The main() class for the EXE
     ///
-    /// This EXE allows you to run the D2 dispenser from the command line by providing a COM port, a protocol ID and a plate type ID.
+    /// This EXE allows you to run the D2 dispenser from the command line or export protocols.
     /// 
-    /// See the following example:
-    /// 
-    /// Example:
-    ///  DispenseCommandLine.exe -ComPort COM9 -ProtocolId d338f60cb0d79fb0d16c00966f373a58 -PlateTypeId 3c0cdfed-19f9-430f-89e2-29ff7c5f1f20
-    ///
-    /// The protocol id is taken from the webapp GUI, see the protocol meta info tab
-    /// The plate type id is the guid for the plate type. See this list of plate types https://labware.ukrobotics.app/  or on the webapp gui
     /// </summary>
     class MainClass
     {
@@ -56,57 +51,95 @@ namespace DispenseCommandLine
         private const string ComPortArgName = "ComPort";
         private const string ProtocolIdArgName = "ProtocolId";
         private const string PlateTypeIdArgName = "PlateTypeId";
+        private const string ProtocolCsvPathArgName = "ImportProtocolCsv";
+        private const string ExportCsvPathArgName = "ExportToPath";
 
 
         /// <summary>
         /// Main method
         /// </summary>
-        /// <param name="args">
-        ///  
-        /// </param>
-        /// <returns></returns>
         static int Main(string[] args)
         {
-
-
             D2Controller controller = null;
             try
             {
-                controller = new D2Controller();
+                // --- Argument Parsing ---
+                string comPort = GetArg(args, ComPortArgName, false);
+                string plateTypeId = GetArg(args, PlateTypeIdArgName, false);
+                string protocolId = GetArg(args, ProtocolIdArgName, false);
+                string protocolCsvPath = GetArg(args, ProtocolCsvPathArgName, false);
+                string exportToPath = GetArg(args, ExportCsvPathArgName, false);
 
-                string comPort = GetArg(args, ComPortArgName);
+                // --- Mode 1: Export Protocol ---
+                if (!string.IsNullOrEmpty(exportToPath))
+                {
+                    if (string.IsNullOrEmpty(protocolId))
+                    {
+                        throw new Exception($"The ' -{ProtocolIdArgName}' argument is required when exporting a protocol.");
+                    }
+
+                    Console.WriteLine($"Fetching protocol with ID: {protocolId}...");
+                    ProtocolData protocolToExport = D2DataAccess.GetProtocol(protocolId);
+
+                    Console.WriteLine($"Exporting protocol to: {exportToPath}...");
+                    ProtocolCsvExporter.Export(protocolToExport, exportToPath);
+
+                    Console.WriteLine("Export completed successfully.");
+                    return SuccessReturnCode;
+                }
+
+                // --- Mode 2: Run Dispense ---
+                // Required arguments for running a dispense
+                if (string.IsNullOrEmpty(comPort)) throw new Exception($"Missing required argument: '-{ComPortArgName}'");
+                if (string.IsNullOrEmpty(plateTypeId)) throw new Exception($"Missing required argument: '-{PlateTypeIdArgName}'");
+
+                controller = new D2Controller();
                 controller.OpenComms(comPort);
 
-                string protocolId = GetArg(args, ProtocolIdArgName);
-                string plateTypeId = GetArg(args, PlateTypeIdArgName);
-                controller.RunDispense(protocolId, plateTypeId);// this blocks until complete
+                if (!string.IsNullOrEmpty(protocolId) && !string.IsNullOrEmpty(protocolCsvPath))
+                {
+                    throw new Exception($"Please provide either '-{ProtocolIdArgName}' or '-{ProtocolCsvPathArgName}', but not both.");
+                }
 
+                if (!string.IsNullOrEmpty(protocolId))
+                {
+                    Console.WriteLine($"Running dispense with Protocol ID: {protocolId}");
+                    controller.RunDispense(protocolId, plateTypeId);
+                }
+                else if (!string.IsNullOrEmpty(protocolCsvPath))
+                {
+                    Console.WriteLine($"Importing and running dispense from: {protocolCsvPath}");
+                    ProtocolData protocolData = ProtocolCsvImporter.Import(protocolCsvPath);
+                    controller.RunDispense(protocolData, plateTypeId);
+                }
+                else
+                {
+                    throw new Exception($"Missing protocol source. Please supply either '-{ProtocolIdArgName}' or '-{ProtocolCsvPathArgName}'.");
+                }
+
+                Console.WriteLine("Dispense completed successfully.");
                 return SuccessReturnCode;
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine("Dispense command failed " + e.Message);
+                Console.Error.WriteLine("Command failed: " + e.Message);
                 return ErrorReturnCode;
             }
             finally
             {
                 controller?.Dispose();
             }
-
-
         }
 
-        private static string GetArg(string[] args, string argName)
+        private static string GetArg(string[] args, string argName, bool isRequired)
         {
             string argValue = CommandLineArgUtils.GetArgOrNull(args, argName);
-            if (null == argValue)
+            if (isRequired && string.IsNullOrEmpty(argValue))
             {
-                throw new Exception($"Missing arg supplied on command line: '{argName}'");
+                throw new Exception($"Missing required argument on command line: '-{argName}'");
             }
 
             return argValue;
         }
-
-
     }
 }
