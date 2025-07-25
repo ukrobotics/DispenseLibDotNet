@@ -141,25 +141,21 @@ namespace UKRobotics.D2.DispenseLib
             return ControllerArms.ReadString(SerialIdParamId);
         }
 
-
         /// <summary>
         ///
-        /// Run a dispense and block until complete.
+        /// Run a dispense using a ProtocolData object and block until complete.
         /// 
         /// </summary>
-        /// <param name="protocolId">
-        /// The protocol ID is created automatically when you edit and save a protocol from the D2's software on [https://dispense.ukrobotics.app](https://dispense.ukrobotics.app)
-        /// </param>
+        /// <param name="protocolData">The protocol data object to use for the dispense.</param>
         /// <param name="plateTypeGuid">
         /// The plate type ID is taken from our public labware library here: [https://labware.ukrobotics.app/](https://labware.ukrobotics.app/) . If you have an item of labware that is not currently in our library please contact us at info at ukrobotics.net.
         /// </param>
-        public void RunDispense(string protocolId, string plateTypeGuid)
+        public void RunDispense(ProtocolData protocolData, string plateTypeGuid)
         {
 
             try
             {
                 plateTypeGuid = plateTypeGuid.Trim();
-                protocolId = protocolId.Trim();
 
                 ClearMotorErrorFlags();
 
@@ -172,7 +168,8 @@ namespace UKRobotics.D2.DispenseLib
                 MethodInvokerThread dataAccessThread = new MethodInvokerThread(new MethodInvokerThread.MethodInvoker(
                     () =>
                     {
-                        dispenseCommands = CompileDispense(deviceSerialId, protocolId, plateType);
+                        ActiveCalibrationData calibration = D2DataAccess.GetActiveCalibrationData(deviceSerialId);
+                        dispenseCommands = CompileDispense(calibration, protocolData, plateType);
                     }));
 
                 MethodInvokerThread zAndClampThread = new MethodInvokerThread(new MethodInvokerThread.MethodInvoker(() =>
@@ -200,6 +197,46 @@ namespace UKRobotics.D2.DispenseLib
                 StartDispense(out TimeSpan dispenseDurationEstimate);// this is an under estimate of time that is returned!!
                 WaitForDispenseComplete(dispenseDurationEstimate);
 
+            }
+            finally
+            {
+                try
+                {
+                    DisableAllMotors();
+                }
+                catch
+                {
+                }
+                try
+                {
+                    SetClamp(false);
+                }
+                catch
+                {
+                }
+            }
+        }
+
+
+        /// <summary>
+        ///
+        /// Run a dispense and block until complete.
+        /// 
+        /// </summary>
+        /// <param name="protocolId">
+        /// The protocol ID is created automatically when you edit and save a protocol from the D2's software on [https://dispense.ukrobotics.app](https://dispense.ukrobotics.app)
+        /// </param>
+        /// <param name="plateTypeGuid">
+        /// The plate type ID is taken from our public labware library here: [https://labware.ukrobotics.app/](https://labware.ukrobotics.app/) . If you have an item of labware that is not currently in our library please contact us at info at ukrobotics.net.
+        /// </param>
+        public void RunDispense(string protocolId, string plateTypeGuid)
+        {
+
+            try
+            {
+                protocolId = protocolId.Trim();
+                ProtocolData protocol = D2DataAccess.GetProtocol(protocolId);
+                RunDispense(protocol, plateTypeGuid);
             }
             finally
             {
@@ -571,9 +608,9 @@ namespace UKRobotics.D2.DispenseLib
                         XYPoint xy = GetWellXY(plateType, well);
 
                         var wellRequestString = "";
-                        wellRequestString += $"{ (int)Math.Round(xy.X.GetValue(DistanceUnitType.um))}";
-                        wellRequestString += $",{ (int)Math.Round(xy.Y.GetValue(DistanceUnitType.um))}";
-                        wellRequestString += $",{ xApproachDirection}";
+                        wellRequestString += $"{(int)Math.Round(xy.X.GetValue(DistanceUnitType.um))}";
+                        wellRequestString += $",{(int)Math.Round(xy.Y.GetValue(DistanceUnitType.um))}";
+                        wellRequestString += $",{xApproachDirection}";
 
                         int durationMicroseconds = GetDispenseDurationMicroseconds(
                             valveNumber,

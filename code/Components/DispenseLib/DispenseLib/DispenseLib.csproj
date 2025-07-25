@@ -60,6 +60,8 @@
     <Compile Include="Calibration\CalibrationPoint.cs" />
     <Compile Include="DataAccess\D2DataAccess.cs" />
     <Compile Include="Labware\PlateTypeData.cs" />
+    <Compile Include="Protocol\ProtocolCsvExporter.cs" />
+    <Compile Include="Protocol\ProtocolCsvImporter.cs" />
     <Compile Include="Protocol\ProtocolData.cs" />
     <Compile Include="Protocol\ProtocolWell.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
