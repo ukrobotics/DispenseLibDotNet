@@ -51,7 +51,7 @@ namespace DispenseCommandLine
         private const string ComPortArgName = "ComPort";
         private const string ProtocolIdArgName = "ProtocolId";
         private const string PlateTypeIdArgName = "PlateTypeId";
-        private const string ProtocolCsvPathArgName = "ImportProtocolCsv";
+        private const string ProtocolCsvPathArgName = "DispenseCsv";
         private const string ExportCsvPathArgName = "ExportToPath";
 
 
