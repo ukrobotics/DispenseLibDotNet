@@ -36,6 +36,9 @@ namespace UKRobotics.D2.DispenseLib.Labware
     [DataContract]
     public class PlateTypeData
     {
+        // Added ID to allow searching in the library
+        [DataMember]
+        public string Id { get; set; }
 
         [DataMember]
         public int WellCount { get; set; }
