@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Runtime.Serialization;
 using UKRobotics.D2.DispenseLib.Calibration;
 using UKRobotics.D2.DispenseLib.Common;
@@ -85,19 +88,72 @@ namespace UKRobotics.D2.DispenseLib.DataAccess
             }
         
         }
-        
-        public static PlateTypeData GetPlateTypeData(string guid)
+
+        // Internal class to map the JSON structure of labware_library.json
+        [DataContract]
+        private class LabwareLibrary
         {
-            // 
-            Uri uri = new Uri($"https://labware.ukrobotics.app/{guid}.json");
-        
-            WebRequest request = WebRequest.Create(uri);
-            WebResponse response = request.GetResponse();
-            StreamReader reader = new StreamReader(response.GetResponseStream());
-            string responseData = reader.ReadToEnd();
-            return PlateTypeData.FromJson(responseData);
-        
+            [DataMember(Name = "Plates")]
+            public List<PlateTypeData> Plates { get; set; }
         }
 
+        public static PlateTypeData GetPlateTypeData(string guid)
+        {
+            try
+            {
+                // 1. Try to fetch from the online library first
+                Uri uri = new Uri($"https://labware.ukrobotics.app/{guid}.json");
+
+                WebRequest request = WebRequest.Create(uri);
+                using (WebResponse response = request.GetResponse())
+                using (StreamReader reader = new StreamReader(response.GetResponseStream()))
+                {
+                    string responseData = reader.ReadToEnd();
+                    return PlateTypeData.FromJson(responseData);
+                }
+            }
+            catch (Exception)
+            {
+                // 2. Fallback: Load the embedded labware_library.json
+                var assembly = Assembly.GetExecutingAssembly();
+
+                // A. Try the standard expected path (Namespace.Folder.Filename)
+                string resourceName = "UKRobotics.D2.DispenseLib.Labware.labware_library.json";
+
+                // B. Safety Check: If that specific path doesn't exist, search for it.
+                // This handles cases where the DefaultNamespace might differ from the folder structure.
+                if (assembly.GetManifestResourceInfo(resourceName) == null)
+                {
+                    resourceName = assembly.GetManifestResourceNames()
+                        .FirstOrDefault(r => r.EndsWith("labware_library.json", StringComparison.InvariantCultureIgnoreCase));
+                }
+
+                if (!string.IsNullOrEmpty(resourceName))
+                {
+                    using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+                    using (StreamReader reader = new StreamReader(stream))
+                    {
+                        string jsonContent = reader.ReadToEnd();
+
+                        // Deserialize the library container
+                        var library = JsonUtils.DeserializeObject<LabwareLibrary>(jsonContent);
+
+                        if (library != null && library.Plates != null)
+                        {
+                            var match = library.Plates.FirstOrDefault(p =>
+                                string.Equals(p.Id, guid, StringComparison.OrdinalIgnoreCase));
+
+                            if (match != null)
+                            {
+                                return match;
+                            }
+                        }
+                    }
+                }
+
+                // 3. If not found locally or in resources, rethrow
+                throw;
+            }
+        }
     }
 }

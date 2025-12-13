@@ -56,6 +56,7 @@
     <Compile Include="D2Controller.cs" />
     <Compile Include="Calibration\ChannelCalibration.cs" />
     <Compile Include="Calibration\CalibrationTable.cs" />
+	<Compile Include="Calibration\CalibrationCsvImporter.cs" />
     <Compile Include="Calibration\ActiveCalibrationData.cs" />
     <Compile Include="Calibration\CalibrationPoint.cs" />
     <Compile Include="DataAccess\D2DataAccess.cs" />
@@ -65,6 +66,7 @@
     <Compile Include="Protocol\ProtocolData.cs" />
     <Compile Include="Protocol\ProtocolWell.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+	 <EmbeddedResource Include="Labware\labware_library.json" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

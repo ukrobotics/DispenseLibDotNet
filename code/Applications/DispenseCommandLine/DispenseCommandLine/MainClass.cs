@@ -30,7 +30,9 @@ For support - please contact us at  www.ukrobotics.com
 using System;
 using UKRobotics.Common;
 using UKRobotics.D2.DispenseLib;
+using UKRobotics.D2.DispenseLib.Calibration;
 using UKRobotics.D2.DispenseLib.DataAccess;
+using UKRobotics.D2.DispenseLib.Labware;
 using UKRobotics.D2.DispenseLib.Protocol;
 
 namespace DispenseCommandLine
@@ -54,6 +56,10 @@ namespace DispenseCommandLine
         private const string ProtocolCsvPathArgName = "DispenseCsv";
         private const string ExportCsvPathArgName = "ExportToPath";
 
+        // New arguments for offline calibration
+        private const string CalibrationValve1ArgName = "CalibrationValve1";
+        private const string CalibrationValve2ArgName = "CalibrationValve2";
+
 
         /// <summary>
         /// Main method
@@ -69,6 +75,8 @@ namespace DispenseCommandLine
                 string protocolId = GetArg(args, ProtocolIdArgName, false);
                 string protocolCsvPath = GetArg(args, ProtocolCsvPathArgName, false);
                 string exportToPath = GetArg(args, ExportCsvPathArgName, false);
+                string calValve1Path = GetArg(args, CalibrationValve1ArgName, false);
+                string calValve2Path = GetArg(args, CalibrationValve2ArgName, false);
 
                 // --- Mode 1: Export Protocol ---
                 if (!string.IsNullOrEmpty(exportToPath))
@@ -93,9 +101,16 @@ namespace DispenseCommandLine
                 if (string.IsNullOrEmpty(comPort)) throw new Exception($"Missing required argument: '-{ComPortArgName}'");
                 if (string.IsNullOrEmpty(plateTypeId)) throw new Exception($"Missing required argument: '-{PlateTypeIdArgName}'");
 
+                // Initialize Controller
                 controller = new D2Controller();
                 controller.OpenComms(comPort);
 
+                // Read Device Serial (used for logging or online calibration fetch)
+                string deviceSerialId = controller.ReadSerialIDFromDevice();
+                Console.WriteLine($"Connected to D2 Device: {deviceSerialId}");
+
+                // 1. Prepare Protocol Data (Online or Offline)
+                ProtocolData protocol = null;
                 if (!string.IsNullOrEmpty(protocolId) && !string.IsNullOrEmpty(protocolCsvPath))
                 {
                     throw new Exception($"Please provide either '-{ProtocolIdArgName}' or '-{ProtocolCsvPathArgName}', but not both.");
@@ -103,19 +118,40 @@ namespace DispenseCommandLine
 
                 if (!string.IsNullOrEmpty(protocolId))
                 {
-                    Console.WriteLine($"Running dispense with Protocol ID: {protocolId}");
-                    controller.RunDispense(protocolId, plateTypeId);
+                    Console.WriteLine($"Fetching Protocol ID: {protocolId}");
+                    protocol = D2DataAccess.GetProtocol(protocolId);
                 }
                 else if (!string.IsNullOrEmpty(protocolCsvPath))
                 {
-                    Console.WriteLine($"Importing and running dispense from: {protocolCsvPath}");
-                    ProtocolData protocolData = ProtocolCsvImporter.Import(protocolCsvPath);
-                    controller.RunDispense(protocolData, plateTypeId);
+                    Console.WriteLine($"Importing Protocol CSV: {protocolCsvPath}");
+                    protocol = ProtocolCsvImporter.Import(protocolCsvPath);
                 }
                 else
                 {
                     throw new Exception($"Missing protocol source. Please supply either '-{ProtocolIdArgName}' or '-{ProtocolCsvPathArgName}'.");
                 }
+
+                // 2. Prepare Plate Data (Online with Local Fallback)
+                // Note: GetPlateTypeData now includes the local file fallback logic we added previously.
+                Console.WriteLine($"Resolving Plate Type ID: {plateTypeId}");
+                PlateTypeData plate = D2DataAccess.GetPlateTypeData(plateTypeId);
+
+                // 3. Prepare Calibration Data (Online or Offline)
+                ActiveCalibrationData calibration = null;
+                if (!string.IsNullOrEmpty(calValve1Path))
+                {
+                    Console.WriteLine("Importing Calibration from local CSV files...");
+                    calibration = CalibrationCsvImporter.Import(calValve1Path, calValve2Path);
+                }
+                else
+                {
+                    Console.WriteLine("Fetching Active Calibration from Cloud...");
+                    calibration = D2DataAccess.GetActiveCalibrationData(deviceSerialId);
+                }
+
+                // 4. Run Dispense (Injecting all dependencies)
+                Console.WriteLine("Starting Dispense...");
+                controller.RunDispense(protocol, plate, calibration);
 
                 Console.WriteLine("Dispense completed successfully.");
                 return SuccessReturnCode;

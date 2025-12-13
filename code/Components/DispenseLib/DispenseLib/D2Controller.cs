@@ -91,7 +91,7 @@ namespace UKRobotics.D2.DispenseLib
         }
 
         protected D2Controller(
-            int controllerNumberZAxis = 2, 
+            int controllerNumberZAxis = 2,
             int axisNumberZAxis = 1,
             int controllerAxisCount = 2)
         {
@@ -111,7 +111,7 @@ namespace UKRobotics.D2.DispenseLib
             Arm2 = ControllerArms.GetAxis(2);
         }
 
-        public void OpenComms(string comPort, int baud=115200)
+        public void OpenComms(string comPort, int baud = 115200)
         {
             OpenComms(new ControlConnection(comPort, baud));
         }
@@ -143,58 +143,36 @@ namespace UKRobotics.D2.DispenseLib
 
         /// <summary>
         ///
-        /// Run a dispense using a ProtocolData object and block until complete.
+        /// Run a dispense using pre-loaded data objects. 
+        /// This method is fully offline-capable.
         /// 
         /// </summary>
-        /// <param name="protocolData">The protocol data object to use for the dispense.</param>
-        /// <param name="plateTypeGuid">
-        /// The plate type ID is taken from our public labware library here: [https://labware.ukrobotics.app/](https://labware.ukrobotics.app/) . If you have an item of labware that is not currently in our library please contact us at info at ukrobotics.net.
-        /// </param>
-        public void RunDispense(ProtocolData protocolData, string plateTypeGuid)
+        /// <param name="protocolData">The protocol definition</param>
+        /// <param name="plateType">The plate type definition</param>
+        /// <param name="calibration">The calibration data for the device</param>
+        public void RunDispense(ProtocolData protocolData, PlateTypeData plateType, ActiveCalibrationData calibration)
         {
-
             try
             {
-                plateTypeGuid = plateTypeGuid.Trim();
-
                 ClearMotorErrorFlags();
 
-                string deviceSerialId = ReadSerialIDFromDevice();
+                // 1. Compile the dispense commands (Memory operation, fast)
+                List<string> dispenseCommands = CompileDispense(calibration, protocolData, plateType);
 
+                // 2. Move Z Axis to position (Mechanical operation, slow)
+                Distance plateHeight = new Distance(plateType.Height, DistanceUnitType.mm);
+                Distance dispenseHeight = plateHeight + Distance.Parse("1mm");
+                MoveZToDispenseHeight(dispenseHeight);
+                SetClamp(true);
 
-                var plateType = D2DataAccess.GetPlateTypeData(plateTypeGuid);
-                List<string> dispenseCommands = null;
-
-                MethodInvokerThread dataAccessThread = new MethodInvokerThread(new MethodInvokerThread.MethodInvoker(
-                    () =>
-                    {
-                        ActiveCalibrationData calibration = D2DataAccess.GetActiveCalibrationData(deviceSerialId);
-                        dispenseCommands = CompileDispense(calibration, protocolData, plateType);
-                    }));
-
-                MethodInvokerThread zAndClampThread = new MethodInvokerThread(new MethodInvokerThread.MethodInvoker(() =>
-                {
-                    Distance plateHeight = new Distance(plateType.Height, DistanceUnitType.mm);
-                    Distance dispenseHeight = plateHeight + Distance.Parse("1mm");
-                    MoveZToDispenseHeight(dispenseHeight);
-
-                    SetClamp(true);
-                }));
-
-
-                dataAccessThread.StartThread();
-                zAndClampThread.StartThread();
-                dataAccessThread.JoinWithExceptionRethrow();
-                zAndClampThread.JoinWithExceptionRethrow();
-
-
+                // 3. Send Commands
                 foreach (string dispenseCommand in dispenseCommands)
                 {
                     ControlConnection.SendMessageRaw(dispenseCommand, true, out bool success, out string errorMessage);
                 }
 
-
-                StartDispense(out TimeSpan dispenseDurationEstimate);// this is an under estimate of time that is returned!!
+                // 4. Start Dispense
+                StartDispense(out TimeSpan dispenseDurationEstimate);
                 WaitForDispenseComplete(dispenseDurationEstimate);
 
             }
@@ -217,6 +195,30 @@ namespace UKRobotics.D2.DispenseLib
             }
         }
 
+        /// <summary>
+        ///
+        /// Run a dispense using a ProtocolData object and block until complete.
+        /// 
+        /// </summary>
+        /// <param name="protocolData">The protocol data object to use for the dispense.</param>
+        /// <param name="plateTypeGuid">
+        /// The plate type ID is taken from our public labware library here: [https://labware.ukrobotics.app/](https://labware.ukrobotics.app/) . If you have an item of labware that is not currently in our library please contact us at info at ukrobotics.net.
+        /// </param>
+        public void RunDispense(ProtocolData protocolData, string plateTypeGuid)
+        {
+            // Prepare Data
+            plateTypeGuid = plateTypeGuid.Trim();
+            string deviceSerialId = ReadSerialIDFromDevice();
+
+            // Fetch Dependencies 
+            // GetPlateTypeData now includes local fallback
+            // GetActiveCalibrationData fetches from cloud
+            var plateType = D2DataAccess.GetPlateTypeData(plateTypeGuid);
+            var calibration = D2DataAccess.GetActiveCalibrationData(deviceSerialId);
+
+            // Delegate to the Master offline-capable method
+            RunDispense(protocolData, plateType, calibration);
+        }
 
         /// <summary>
         ///
@@ -231,31 +233,9 @@ namespace UKRobotics.D2.DispenseLib
         /// </param>
         public void RunDispense(string protocolId, string plateTypeGuid)
         {
-
-            try
-            {
-                protocolId = protocolId.Trim();
-                ProtocolData protocol = D2DataAccess.GetProtocol(protocolId);
-                RunDispense(protocol, plateTypeGuid);
-            }
-            finally
-            {
-                try
-                {
-                    DisableAllMotors();
-                }
-                catch
-                {
-                }
-                try
-                {
-                    SetClamp(false);
-                }
-                catch
-                {
-                }
-            }
-
+            protocolId = protocolId.Trim();
+            ProtocolData protocol = D2DataAccess.GetProtocol(protocolId);
+            RunDispense(protocol, plateTypeGuid);
         }
 
         /// <summary>
@@ -297,7 +277,7 @@ namespace UKRobotics.D2.DispenseLib
                     throw new Exception(errorMessage);
                 }
 
-                AwaitIdleValveState(TimeSpan.FromMilliseconds(((double)openTimeUsecs / 1000) + 250) );
+                AwaitIdleValveState(TimeSpan.FromMilliseconds(((double)openTimeUsecs / 1000) + 250));
 
             }
             finally
@@ -333,9 +313,9 @@ namespace UKRobotics.D2.DispenseLib
 
                 ResponseMessage response = ControlConnection.SendMessageRaw(
                     $"GET_VALVE_STATE,{ControllerNumberArms},0", true, out bool success, out string errorMessage);
-                response.GetParameter( 0, out int i );
-                ValveCommandState state = (ValveCommandState) i;
-                if ( ValveCommandState.Idle == state )
+                response.GetParameter(0, out int i);
+                ValveCommandState state = (ValveCommandState)i;
+                if (ValveCommandState.Idle == state)
                 {
                     break;
                 }
@@ -569,8 +549,8 @@ namespace UKRobotics.D2.DispenseLib
         /// <param name="plateType"></param>
         /// <returns></returns>
         public List<string> CompileDispense(
-            ActiveCalibrationData activeCalibrationData, 
-            ProtocolData protocolData, 
+            ActiveCalibrationData activeCalibrationData,
+            ProtocolData protocolData,
             PlateTypeData plateType)
         {
             int wellCount = plateType.WellCount;
@@ -618,7 +598,7 @@ namespace UKRobotics.D2.DispenseLib
                             well,
                             protocolData);
 
-                        wellRequestString += $",{ durationMicroseconds}";
+                        wellRequestString += $",{durationMicroseconds}";
                         wellRequestString += ",1";//SHOT COUNT.... 1 shot per well
 
                         if (durationMicroseconds > 0)
@@ -626,7 +606,7 @@ namespace UKRobotics.D2.DispenseLib
                             nonZeroDispenseOnLine = true;
                         }
 
-                        requestString += $",{ wellRequestString}";// append params
+                        requestString += $",{wellRequestString}";// append params
 
                     }
 
